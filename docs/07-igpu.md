@@ -67,6 +67,38 @@ FFmpeg 的 `-qsv_device` 在本机把两张 Intel 卡区分得很清楚：
 4. 跑 `.\b65.ps1 doctor`，应看到 Arc 的专用显存占用明显下降；
 5. 如有问题，BIOS 改回即可，不影响 B65。
 
+### MSI B760（Click BIOS 5）具体路径
+
+微星 B760 的菜单名在不同 BIOS 版本里略有差异，按下面顺序找：
+
+1. 开机按 **Del** 进 BIOS，按 **F7** 切到 Advanced；
+2. `Settings` → `Advanced` → **`Integrated Graphics Configuration`**；
+3. 把 **`Initiate Graphic Adapter`** 改成 **`IGD`**（原值通常是 `PEG`）；
+4. 把 **`IGD Multi-Monitor`** 改成 **`Enabled`**（不打开的话，插着独显时核显会被关掉）；
+5. **`Integrated Graphics Share Memory`** 选 **128M**（4K 桌面更稳；只占 128 MB 系统内存）；
+6. **F10** 保存退出，关机；
+7. 把显示器线从 B65 拔下，插到**主板的 HDMI/DP**；
+8. 开机进 Windows，`设置 → 系统 → 显示 → 高级显示` 应显示
+   `Intel(R) UHD Graphics 770`；
+9. 跑 `.65.ps1 doctor`，`Display` 行应变成 UHD 770，B65 的 `dedicated` 应明显下降。
+
+如果找不到 `Integrated Graphics Configuration`，去这两个位置找：
+
+- `Settings` → `Advanced` → **`Integrated Peripherals`** → `Initiate Graphic Adapter`；
+- 或 BIOS 里直接搜 **`IGD`** / `Multi-Monitor`。
+
+顺序上的坑：
+
+- 如果先把 `Initiate Graphic Adapter` 改成 `IGD`、但显示器还插在 B65 上，可能黑屏；
+  稳妥做法是**先开 `IGD Multi-Monitor` 并保存**，关机、换线，再进来把 primary 改成 `IGD`。
+- 换线后如果无信号：把线插回 B65，进 BIOS 确认 `IGD Multi-Monitor=Enabled`；
+  仍不行就清 CMOS（主板上的 JBAT1 短接）恢复默认。
+- `Above 4G Decoding` / `Re-Size BAR` 不用动，继续给 B65 用。
+
+Windows 侧没有“把桌面强制切到某张卡”的全局开关——**桌面跟着显示器所接的 GPU 走**。
+换线后如果想给具体程序指定 B65：
+`设置 → 系统 → 显示 → 图形 → 添加应用 → 选项 → 高性能`。
+
 ### B. QSV 编码/解码（可选，默认不开）
 
 适用场景：
