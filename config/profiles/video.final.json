@@ -33,7 +33,7 @@
     },
     "seed": {
       "node": "3",
-      "input": "seed"
+      "input": "noise_seed"
     },
     "endSteps": {
       "node": "13",
@@ -45,7 +45,7 @@
     },
     "endSeed": {
       "node": "13",
-      "input": "seed"
+      "input": "noise_seed"
     },
     "image": {
       "node": "97",
