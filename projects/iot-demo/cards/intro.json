@@ -1,0 +1,21 @@
+{
+  "kicker": "IOT MODULE PORTFOLIO",
+  "title": "连接每一个场景",
+  "subtitle": "面向工业、能源与车载的 5G / LTE / Cat.1 / NB-IoT 模组",
+  "bullets": [
+    "全球频段覆盖，单一 SKU 支持多区域",
+    "LGA / M.2 / Mini PCIe 多种封装",
+    "工业级温度与长期供货"
+  ],
+  "specs": [
+    { "k": "制式", "v": "5G / LTE" },
+    { "k": "封装", "v": "LGA / M.2" },
+    { "k": "温度", "v": "-40 ~ +85 C" },
+    { "k": "供货", "v": "长期" }
+  ],
+  "footer": "示例卡片 - 请替换为真实产品数据",
+  "accent": "#00A3E0",
+  "logo": "",
+  "background": "",
+  "output": "output/cards/intro.png"
+}

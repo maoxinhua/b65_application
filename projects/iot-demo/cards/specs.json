@@ -1,0 +1,21 @@
+{
+  "kicker": "SPECIFICATIONS",
+  "title": "5G Sub-6 Module",
+  "subtitle": "Industrial-grade connectivity for global IoT deployments",
+  "bullets": [
+    "3GPP Release 15, NSA and SA",
+    "LGA form factor, 41 x 43 mm",
+    "USB 3.1 / PCIe interfaces"
+  ],
+  "specs": [
+    { "k": "Frequency", "v": "Sub-6 GHz" },
+    { "k": "Data rate", "v": "2.5 Gbps DL" },
+    { "k": "Temperature", "v": "-40 ~ +85 C" },
+    { "k": "Power", "v": "3.3 - 4.3 V" }
+  ],
+  "footer": "示例卡片 - 请替换为真实产品数据",
+  "accent": "#00A3E0",
+  "logo": "",
+  "background": "",
+  "output": "output/cards/specs.png"
+}

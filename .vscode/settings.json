@@ -1,0 +1,23 @@
+{
+  "files.encoding": "utf8",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.formatOnSave": false,
+  "powershell.powerShellDefaultVersion": "Windows PowerShell",
+  "powershell.codeFormatting.preset": "OTBS",
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "explorer.excludeGitIgnore": true,
+  "search.exclude": {
+    "**/apps": true,
+    "**/models": true,
+    "**/tools": true,
+    "**/runtime": true,
+    "**/output": true
+  },
+  "files.watcherExclude": {
+    "**/apps/**": true,
+    "**/models/**": true,
+    "**/runtime/**": true,
+    "**/output/**": true
+  }
+}

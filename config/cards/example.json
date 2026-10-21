@@ -1,0 +1,21 @@
+{
+  "kicker": "QUECTEL  |  IoT MODULE",
+  "title": "RM500Q-GL",
+  "subtitle": "5G Sub-6 GHz module for global IoT deployments",
+  "bullets": [
+    "3GPP Release 15, NSA and SA",
+    "LGA form factor, 41 x 43 mm",
+    "Industrial temperature range"
+  ],
+  "specs": [
+    { "k": "Frequency", "v": "Sub-6 GHz" },
+    { "k": "Data rate", "v": "2.5 Gbps DL" },
+    { "k": "Interface", "v": "USB 3.1 / PCIe" },
+    { "k": "Temperature", "v": "-40 to +85 C" }
+  ],
+  "footer": "quectel.com  |  Build. Connect. Innovate.",
+  "accent": "#00A3E0",
+  "logo": "",
+  "background": "",
+  "output": "output/cards/rm500q.png"
+}

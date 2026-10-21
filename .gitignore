@@ -1,0 +1,41 @@
+# Runtime and downloaded payloads (never commit)
+apps/
+models/
+tools/
+runtime/
+output/
+projects/*/output/
+
+# Model weights and archives
+*.gguf
+*.safetensors
+*.ckpt
+*.pt
+*.bin
+*.7z
+*.7z.*
+*.zip
+*.tar
+*.tar.*
+*.mp4
+*.mkv
+*.mov
+*.wav
+*.mp3
+
+# Python / Node
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+
+# Editor / OS
+.vscode/*.log
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Local secrets
+config/local.*.json
+runtime/state.json

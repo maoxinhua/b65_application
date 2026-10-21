@@ -1,0 +1,52 @@
+{
+  "name": "draft",
+  "description": "Fast low-resolution preview: Wan2.2 TI2V 5B, 704x480, 20 steps.",
+  "workflow": "workflows/wan22_ti2v_5b.api.json",
+  "map": {
+    "positive": {
+      "node": "6",
+      "input": "text"
+    },
+    "negative": {
+      "node": "7",
+      "input": "text"
+    },
+    "width": {
+      "node": "55",
+      "input": "width"
+    },
+    "height": {
+      "node": "55",
+      "input": "height"
+    },
+    "frames": {
+      "node": "55",
+      "input": "length"
+    },
+    "steps": {
+      "node": "3",
+      "input": "steps"
+    },
+    "cfg": {
+      "node": "3",
+      "input": "cfg"
+    },
+    "seed": {
+      "node": "3",
+      "input": "seed"
+    },
+    "image": {
+      "node": "52",
+      "input": "image"
+    }
+  },
+  "params": {
+    "width": 704,
+    "height": 480,
+    "frames": 49,
+    "steps": 20,
+    "cfg": 5.0,
+    "seed": -1
+  },
+  "timeoutSec": 1200
+}

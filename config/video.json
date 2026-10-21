@@ -1,0 +1,18 @@
+{
+  "root": "apps/ComfyUI_windows_portable",
+  "port": 8188,
+  "listen": "127.0.0.1",
+  "reserveVramGB": 2,
+  "startTimeoutSec": 300,
+  "env": {
+    "OMNIXPU_PROVIDER_BOOTSTRAP": "required",
+    "OMNI_ATTN_BACKEND": "cute",
+    "OMNI_IMAGE_XPU_TARGET": "bmg"
+  },
+  "extraArgs": [
+    "--enable-dynamic-vram",
+    "--reserve-vram",
+    "2",
+    "--disable-auto-launch"
+  ]
+}

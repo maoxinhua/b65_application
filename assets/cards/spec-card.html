@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Spec Card</title>
+<style>
+  :root {
+    --accent: {{ACCENT}};
+    --ink: #eef4ff;
+    --muted: #93a4bd;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    {{BG_STYLE}}
+    color: var(--ink);
+    font-family: "Microsoft YaHei", "Segoe UI", "Noto Sans SC", Arial, sans-serif;
+    position: relative;
+  }
+  .frame {
+    position: absolute; inset: 0;
+    padding: 96px 120px 84px 120px;
+    display: flex; flex-direction: column;
+  }
+  .topbar { display: flex; align-items: center; justify-content: space-between; }
+  .logo { height: 56px; max-width: 360px; object-fit: contain; }
+  .kicker {
+    font-size: 24px; letter-spacing: 6px; color: var(--accent);
+    text-transform: uppercase; font-weight: 700;
+  }
+  .main { display: flex; gap: 84px; margin-top: 70px; flex: 1; }
+  .left { width: 1060px; }
+  .title { font-size: 104px; line-height: 1.02; font-weight: 800; letter-spacing: -1px; margin: 0; }
+  .title .bar { display: block; width: 132px; height: 10px; background: var(--accent); margin-top: 30px; }
+  .subtitle { margin-top: 34px; font-size: 34px; line-height: 1.45; color: #c8d6ea; max-width: 980px; }
+  ul.bullets { margin: 42px 0 0 0; padding: 0; list-style: none; }
+  ul.bullets li {
+    font-size: 29px; line-height: 1.55; color: #dbe6f5; margin-bottom: 16px;
+    padding-left: 38px; position: relative;
+  }
+  ul.bullets li:before {
+    content: ""; position: absolute; left: 0; top: 14px;
+    width: 14px; height: 14px; background: var(--accent); border-radius: 3px;
+  }
+  .right { width: 520px; display: flex; flex-direction: column; justify-content: center; }
+  .specs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  }
+  .spec {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 20px 22px; min-height: 118px;
+  }
+  .spec .k { font-size: 20px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .spec .v { font-size: 30px; font-weight: 700; margin-top: 10px; line-height: 1.25; }
+  .footer {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid rgba(255,255,255,0.12); padding-top: 24px;
+    font-size: 22px; color: #8fa2bb; letter-spacing: 1px;
+  }
+  .badge { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="topbar">
+      <div class="kicker">{{KICKER}}</div>
+      {{LOGO_IMG}}
+    </div>
+    <div class="main">
+      <div class="left">
+        <h1 class="title">{{TITLE}}<span class="bar"></span></h1>
+        <div class="subtitle">{{SUBTITLE}}</div>
+        <ul class="bullets">{{BULLETS}}</ul>
+      </div>
+      <div class="right">
+        <div class="specs">{{SPECS}}</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div>{{FOOTER}}</div>
+      <div class="badge">IoT MODULE SERIES</div>
+    </div>
+  </div>
+</body>
+</html>

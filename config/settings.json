@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "projectName": "B65 AI Workbench",
+  "paths": {
+    "apps": "apps",
+    "models": "models",
+    "tools": "tools",
+    "runtime": "runtime",
+    "output": "output",
+    "docs": "docs"
+  },
+  "ports": {
+    "llm": 8095,
+    "comfy": 8188,
+    "dashboard": 8099
+  },
+  "lan": {
+    "enabled": true,
+    "bindHost": "0.0.0.0",
+    "openFirewall": false
+  },
+  "watchdog": {
+    "enabled": true,
+    "sampleSeconds": 5,
+    "reserveRamGB": 12,
+    "warnRamGB": 8,
+    "stopRamGB": 4,
+    "stopAfterSamples": 6,
+    "pageFileWarnPct": 70,
+    "graceSeconds": 180
+  },
+  "video": {
+    "reserveVramMB": 2048,
+    "defaultProfile": "draft"
+  }
+}

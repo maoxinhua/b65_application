@@ -1,0 +1,34 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "scenes": [
+    {
+      "type": "card",
+      "data": "projects/iot-demo/cards/intro.json",
+      "duration": 5
+    },
+    {
+      "type": "image",
+      "path": "assets/products/module.png",
+      "duration": 5,
+      "effect": "kenburns"
+    },
+    {
+      "type": "clip",
+      "path": "output/shots/draft-20260101-120000.mp4",
+      "duration": 5
+    },
+    {
+      "type": "card",
+      "data": "projects/iot-demo/cards/specs.json",
+      "duration": 6
+    }
+  ],
+  "audio": {
+    "voice": "",
+    "music": "",
+    "musicVolume": 0.12
+  },
+  "output": "output/iot-demo.mp4"
+}

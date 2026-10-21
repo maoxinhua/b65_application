@@ -1,0 +1,173 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "B65: Status",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "status"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Doctor",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "doctor"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Setup (folders + 7-Zip + FFmpeg)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "setup"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Install LLM (XeStrata)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "install", "llm"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Install Video (ComfyUI XPU)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "install", "video"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Download draft models",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "models", "-Profile", "draft"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Download final models",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "models", "-Profile", "final"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: LLM Start",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "llm", "start"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: LLM Stop",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "llm", "stop"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Video Start",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "video", "start"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Video Stop",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "video", "stop"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Mode LLM",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "mode", "llm"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Mode Video",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "mode", "video"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Dashboard",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "dashboard"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Render (draft or final)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1",
+        "render", "-Profile", "${input:profile}", "-Image", "${input:image}", "-Prompt", "${input:motion}"
+      ],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Build demo video",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "build", "-Manifest", "projects\\iot-demo\\manifest.json"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Card example",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "card", "-Data", "config\\cards\\example.json"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "B65: Validate workflow",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\b65.ps1", "test-workflow", "-Profile", "${input:profile}", "-Start"],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "profile",
+      "type": "pickString",
+      "description": "Render profile",
+      "options": ["draft", "final"],
+      "default": "draft"
+    },
+    {
+      "id": "image",
+      "type": "promptString",
+      "description": "Product image path (relative to the workspace)",
+      "default": "assets/products/module.png"
+    },
+    {
+      "id": "motion",
+      "type": "promptString",
+      "description": "Camera / motion prompt (no people)",
+      "default": "slow dolly-in, soft rim light, shallow depth of field, no people, cinematic product shot"
+    }
+  ]
+}

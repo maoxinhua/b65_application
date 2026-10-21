@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>B65 AI Workbench</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">B65</div>
+      <div>
+        <h1>AI Workbench</h1>
+        <div class="sub">Qwen3.8-Flash-Next · Wan2.2 · Intel Arc Pro B65 32 GB</div>
+      </div>
+    </div>
+    <div class="mode" id="mode">idle</div>
+  </header>
+
+  <main class="grid">
+    <section class="card" id="llm-card">
+      <div class="card-head">
+        <h2>LLM</h2>
+        <span class="pill" id="llm-state">stopped</span>
+      </div>
+      <div class="kv"><span>Model</span><b id="llm-model">—</b></div>
+      <div class="kv"><span>Context</span><b id="llm-ctx">—</b></div>
+      <div class="kv"><span>PID</span><b id="llm-pid">—</b></div>
+      <div class="kv"><span>RSS / VRAM</span><b id="llm-mem">—</b></div>
+      <div class="kv"><span>Endpoint</span><b id="llm-url" class="mono">—</b></div>
+      <div class="keyrow">
+        <input id="api-key" class="mono" readonly placeholder="API key appears when running" />
+        <button class="ghost" onclick="copyKey()">Copy</button>
+      </div>
+      <div class="actions">
+        <button onclick="act('llm-start')">Start</button>
+        <button class="danger" onclick="act('llm-stop')">Stop</button>
+      </div>
+    </section>
+
+    <section class="card" id="video-card">
+      <div class="card-head">
+        <h2>Video</h2>
+        <span class="pill" id="video-state">stopped</span>
+      </div>
+      <div class="kv"><span>Engine</span><b>ComfyUI · Intel XPU</b></div>
+      <div class="kv"><span>Port</span><b id="video-port">—</b></div>
+      <div class="kv"><span>PID</span><b id="video-pid">—</b></div>
+      <div class="kv"><span>RSS / VRAM</span><b id="video-mem">—</b></div>
+      <div class="kv"><span>UI</span><b class="mono"><a href="http://127.0.0.1:8188" target="_blank">127.0.0.1:8188</a></b></div>
+      <div class="actions">
+        <button onclick="act('video-start')">Start</button>
+        <button class="danger" onclick="act('video-stop')">Stop</button>
+      </div>
+      <p class="hint">Both engines share one GPU. Starting one stops the other.</p>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <h2>System</h2>
+        <span class="pill" id="gpu-name">—</span>
+      </div>
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-top"><span>RAM</span><b id="ram-text">—</b></div>
+          <div class="bar"><i id="ram-bar"></i></div>
+        </div>
+        <div class="meter">
+          <div class="meter-top"><span>Page file</span><b id="pf-text">—</b></div>
+          <div class="bar"><i id="pf-bar"></i></div>
+        </div>
+        <div class="meter">
+          <div class="meter-top"><span>VRAM</span><b id="vram-text">—</b></div>
+          <div class="bar"><i id="vram-bar"></i></div>
+        </div>
+        <div class="meter">
+          <div class="meter-top"><span>GPU util</span><b id="gpu-text">—</b></div>
+          <div class="bar"><i id="gpu-bar"></i></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="ghost" onclick="act('mode-llm')">Mode: LLM</button>
+        <button class="ghost" onclick="act('mode-video')">Mode: Video</button>
+        <button class="ghost" onclick="act('mode-idle')">Stop all</button>
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <h2>Render</h2>
+        <span class="pill" id="render-pill">idle</span>
+      </div>
+      <div class="form">
+        <label>Profile
+          <select id="render-profile">
+            <option value="draft">draft (5B, fast)</option>
+            <option value="final">final (14B + 1080p)</option>
+          </select>
+        </label>
+        <label>Product image
+          <input id="render-image" value="assets/products/module.png" />
+        </label>
+      </div>
+      <textarea id="render-prompt" rows="3">slow dolly-in, soft rim light, shallow depth of field, no people, cinematic product shot</textarea>
+      <div class="actions">
+        <button onclick="queueRender()">Queue render</button>
+        <span id="render-msg" class="hint"></span>
+      </div>
+      <div id="outputs" class="outputs"></div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <h2>Logs</h2>
+        <select id="log-name" onchange="loadLogs()">
+          <option>control</option>
+          <option>llm</option>
+          <option>llm.stderr</option>
+          <option>comfy</option>
+          <option>comfy.stderr</option>
+          <option>watchdog</option>
+          <option>render</option>
+          <option>dashboard</option>
+        </select>
+      </div>
+      <pre id="logs">—</pre>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Local only · <span id="updated">—</span></span>
+    <span>Watchdog: <b id="watchdog">—</b></span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
