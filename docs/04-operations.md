@@ -57,6 +57,79 @@
 Windows 自带的 WMI 和性能计数器**不暴露** Arc 温度，`Get-Counter` 查不到，别在这上面浪费时间。
 如果 xpu-smi 在你的驱动上仍不可用，用 Intel Graphics Software 的 Performance 页，或 HWiNFO64。
 
+## 监控下载进度
+
+最省事的是内置面板（每 5 秒刷新，显示文件、GB、MB/s、ETA、进程和磁盘）：
+
+```powershell
+.\b65.ps1 downloads
+```
+
+只看一次快照：
+
+```powershell
+.\b65.ps1 downloads -Once
+```
+
+`-Once` 没有上一次采样，速度会显示 0；要看速度用默认的循环模式。
+
+### 原始 PowerShell 命令
+
+列出所有模型文件（`.part` 是未完成，刷新后才是实时大小）：
+
+```powershell
+Get-ChildItem .\models\comfyui, .\models\llm -Recurse -File -Include *.part, *.safetensors, *.gguf |
+  ForEach-Object { $_.Refresh(); $_ } |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object Name,
+    @{n='GB';e={[math]::Round($_.Length/1GB,2)}},
+    @{n='Updated';e={$_.LastWriteTime.ToString('HH:mm:ss')}} |
+  Format-Table -AutoSize
+```
+
+单独算某个文件的速度/剩余时间：
+
+```powershell
+$f = Get-Item .\models\comfyui\diffusion_models\wan2.2_ti2v_5B_fp16.safetensors.part
+$s1 = $f.Length; $t1 = Get-Date
+Start-Sleep 5
+$f.Refresh()
+$mbps = ($f.Length - $s1) / 1MB / ((Get-Date) - $t1).TotalSeconds
+$totalGB = 8.72
+$remainGB = $totalGB - ($f.Length / 1GB)
+"速度 {0:N2} MB/s，剩余 {1:N1} GB，ETA {2:N0} 分钟" -f $mbps, $remainGB, ($remainGB * 1024 / $mbps / 60)
+```
+
+看下载队列日志（curl 用 `\r` 刷进度，直接 tail 可能是一长行）：
+
+```powershell
+Get-Content .\runtime\logs\download-video-console.log -Tail 10
+# 只看最后几段进度：
+(Get-Content .\runtime\logs\download-video-console.log -Raw) -split "`r" | Select-Object -Last 3
+```
+
+确认下载进程还活着：
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object Name -in 'curl.exe', 'xestrata-cli.exe', 'python.exe' |
+  Select-Object Name, ProcessId, CommandLine
+```
+
+看实时网速（所有网卡合计，Mbps）：
+
+```powershell
+Get-CimInstance Win32_PerfFormattedData_Tcpip_NetworkInterface |
+  Where-Object BytesTotalPersec -gt 0 |
+  Select-Object Name, @{n='Mbps';e={[math]::Round($_.BytesTotalPersec * 8 / 1MB, 1)}}
+```
+
+看磁盘剩余：
+
+```powershell
+Get-PSDrive E | Select-Object @{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}}
+```
+
 ## 批量渲染
 
 PowerShell 循环调用 `render`，每次换图片/提示词：

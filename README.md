@@ -73,6 +73,7 @@ State and logs live in `runtime\` (gitignored): `state.json`, `health.json`, `lo
 | `install llm\|video\|all` | unpack XeStrata / ComfyUI XPU |
 | `models -Profile draft\|final` | download model weights (`-Endpoint` to override the mirror) |
 | `download-all` | resumable queue: video draft → video final → LLM IQ2_XS |
+| `downloads` | live download speed / ETA / process panel (`-Once` for a snapshot) |
 | `llm start\|stop\|restart\|status` | LLM lifecycle |
 | `video start\|stop\|restart\|status` | ComfyUI lifecycle |
 | `mode llm\|video\|idle` | exclusive switch (stops the other engine) |

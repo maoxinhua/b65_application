@@ -308,6 +308,24 @@
       }
     },
     {
+      "label": "B65: Watch downloads",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\b65.ps1",
+        "downloads"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "B65: GPU temperature",
       "type": "shell",
       "command": "powershell.exe",
