@@ -83,6 +83,7 @@ State and logs live in `runtime\` (gitignored): `state.json`, `health.json`, `lo
 | `build -Manifest ...` | assemble the final video |
 | `test-workflow -Profile ...` | validate node classes/inputs against ComfyUI |
 | `test-qsv` | benchmark CPU vs B65 vs iGPU (UHD 770) H.264 encode |
+| `gputemp` | B65 temperature / power / VRAM via Intel xpu-smi (UAC) |
 | `doctor` | environment checks |
 
 ## RAM / VRAM budget

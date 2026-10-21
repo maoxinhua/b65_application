@@ -112,6 +112,7 @@ function Show-Help {
     Write-Host '  build -Manifest .\projects\iot-demo\manifest.json'
     Write-Host '  test-workflow -Profile draft'
     Write-Host '  test-qsv                    benchmark CPU vs B65 vs iGPU encoders'
+    Write-Host '  gputemp                     B65 temperature / power / VRAM (UAC)'
     Write-Host '  doctor                      environment checks'
     Write-Host ''
 }
@@ -143,6 +144,7 @@ switch ($Command.ToLowerInvariant()) {
     'build'     { Invoke-Step -Name 'Build-Video' -StepArgs $Rest }
     'test-workflow' { Invoke-Step -Name 'Test-Workflow' -StepArgs $Rest }
     'test-qsv'      { Invoke-Step -Name 'Test-Qsv' -StepArgs $Rest }
+    'gputemp'       { Invoke-Step -Name 'Get-GpuTemp' -StepArgs $Rest }
     'doctor'    { Invoke-Step -Name 'Doctor' -StepArgs $Rest }
     default     { Show-Help; throw "Unknown command: $Command" }
 }

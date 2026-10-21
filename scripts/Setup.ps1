@@ -51,6 +51,17 @@ if ((-not (Test-Path -LiteralPath $ffmpegExe)) -or $Force) {
     Remove-Item -LiteralPath $zip -Force
 }
 
+# Intel xpu-smi: GPU temperature/power. Sysman needs an elevated shell at runtime.
+$xpuDir = Join-Path (Get-B65Path 'tools') 'xpu-smi'
+$xpuExe = Get-ChildItem -LiteralPath $xpuDir -Recurse -Filter 'xpu-smi.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ((-not $xpuExe) -or $Force) {
+    $xpuZip = Join-Path (Get-B65Path 'tools') 'xpu-smi.zip'
+    Invoke-B65Download -Uri 'https://github.com/intel/xpumanager/releases/download/v2.3.0/xpu-smi_2.3.0-8fd5dca_win_2022.zip' -OutFile $xpuZip -MinBytes 500000 -Force:$Force
+    if (Test-Path -LiteralPath $xpuDir) { Remove-Item -LiteralPath $xpuDir -Recurse -Force }
+    Expand-Archive -LiteralPath $xpuZip -DestinationPath $xpuDir -Force
+    Remove-Item -LiteralPath $xpuZip -Force
+}
+
 # Report versions.
 $ff = Get-B65Ffmpeg
 Write-B65Log ("ffmpeg: " + $ff) -Name 'setup'

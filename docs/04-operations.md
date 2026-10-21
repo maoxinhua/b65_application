@@ -32,6 +32,31 @@
 | GPU util | 视频渲染 80–100% | 长期 0% 说明没跑在 Arc 上，查 `doctor` |
 | 专家驻留 | 约 11k/24,576 | 明显偏低：关桌面程序、降上下文 |
 
+## 查 B65 温度
+
+```powershell
+.\b65.ps1 gputemp
+```
+
+首次会弹 **UAC**：Windows 上 Intel Sysman 是管理员专属，普通 PowerShell 直接跑 `xpu-smi` 会报
+`Sysman driver initialization failed`。允许后输出包含：
+
+- GPU Core Temperature（核心温度）
+- GPU Memory Temperature / VR（显存、供电温度）
+- GPU Power（功耗）
+- GPU Memory Used（显存占用）
+
+底层命令（在**管理员** PowerShell 里）：
+
+```powershell
+& .\tools\xpu-smi\xpu-smi_2.3.0-8fd5dca_win_2022\xpu-smi.exe --query-gpu=temperature.gpu --id 0
+& .\tools\xpu-smi\xpu-smi_2.3.0-8fd5dca_win_2022\xpu-smi.exe stats -d 0
+```
+
+`xpu-smi` 由 `.65.ps1 setup` 安装；`--list-gpus` 可看设备编号。
+Windows 自带的 WMI 和性能计数器**不暴露** Arc 温度，`Get-Counter` 查不到，别在这上面浪费时间。
+如果 xpu-smi 在你的驱动上仍不可用，用 Intel Graphics Software 的 Performance 页，或 HWiNFO64。
+
 ## 批量渲染
 
 PowerShell 循环调用 `render`，每次换图片/提示词：
