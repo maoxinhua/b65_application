@@ -101,6 +101,7 @@ function Show-Help {
     Write-Host '  setup                       create folders, fetch 7-Zip and FFmpeg'
     Write-Host '  install llm|video|all       download XeStrata and/or ComfyUI XPU'
     Write-Host '  models -Profile draft|final download video model weights'
+    Write-Host '  download-all                resumable queue: draft -> final -> LLM'
     Write-Host '  llm start|stop|restart|status'
     Write-Host '  video start|stop|restart|status'
     Write-Host '  mode llm|video|idle         exclusive GPU mode switch'
@@ -133,6 +134,7 @@ switch ($Command.ToLowerInvariant()) {
         }
     }
     'models'    { Invoke-Step -Name 'Download-Models' -StepArgs $Rest }
+    'download-all' { Invoke-Step -Name 'Download-All' -StepArgs $Rest }
     'llm'       { Invoke-Step -Name 'Llm' -StepArgs $Rest }
     'video'     { Invoke-Step -Name 'Video' -StepArgs $Rest }
     'mode'      { Invoke-Step -Name 'Mode' -StepArgs $Rest }
