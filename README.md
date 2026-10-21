@@ -7,6 +7,8 @@ Windows + VS Code control plane for one **Intel Arc Pro B65 32 GB**:
 
 Both engines share one GPU, so the workbench enforces an **exclusive mode**: starting one stops the other.
 
+![B65 Workbench dashboard](docs/dashboard.png)
+
 > Design notes, measurements and licensing: [B65_本地AI落地方案.md](B65_本地AI落地方案.md) (Chinese).
 
 ---
