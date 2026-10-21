@@ -49,7 +49,7 @@ Open the folder in VS Code, then run the tasks (`Terminal -> Run Task`) or use a
 
 No WSL2: XeStrata's Linux/Arc path does not work reliably under WSL, and ComfyUI should run natively for full VRAM.
 
-The UHD 770 is deliberately left as a **display/QSV-only** device; see [docs/06-igpu.md](docs/06-igpu.md).
+The UHD 770 is deliberately left as a **display/QSV-only** device; see [docs/07-igpu.md](docs/07-igpu.md).
 
 ## How it works
 

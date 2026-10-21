@@ -118,7 +118,7 @@ slow dolly-in, 35mm, soft rim light, dark studio, shallow depth of field, no peo
 .\b65.ps1 build -Manifest .\projects\iot-demo\manifest.json -Encoder h264_qsv -QsvDevice 1
 ```
 
-  但本机 1080p 实测 iGPU QSV 比 libx264 慢约 4×，只在 HEVC/4K 或需要释放 CPU 时才用（见 `docs/06-igpu.md`）。
+  但本机 1080p 实测 iGPU QSV 比 libx264 慢约 4×，只在 HEVC/4K 或需要释放 CPU 时才用（见 `docs/07-igpu.md`）。
 
 ## 无人工镜头的 IoT 视频配方
 
