@@ -402,7 +402,8 @@ function Get-B65ComfyRoot {
     $videoCfg = Get-B65Config -Name video
     $configured = Resolve-B65Path -Path $videoCfg.root
     if ((Test-Path -LiteralPath (Join-Path $configured 'python_embeded\python.exe')) -or
-        (Test-Path -LiteralPath (Join-Path $configured 'python_embedded\python.exe'))) { return $configured }
+        (Test-Path -LiteralPath (Join-Path $configured 'python_embedded\python.exe')) -or
+        (Test-Path -LiteralPath (Join-Path $configured 'python_standalone\python.exe'))) { return $configured }
 
     $apps = Get-B65Path 'apps'
     if (Test-Path -LiteralPath $apps) {
@@ -411,7 +412,7 @@ function Get-B65ComfyRoot {
         if (Test-Path -LiteralPath $preferred) { $candidates = @($preferred) + @($candidates | Where-Object Name -ne 'ComfyUI_windows_portable') }
         foreach ($dir in $candidates) {
             $dir = Get-Item -LiteralPath $dir
-            foreach ($py in @('python_embeded\python.exe', 'python_embedded\python.exe')) {
+            foreach ($py in @('python_embeded\python.exe', 'python_embedded\python.exe', 'python_standalone\python.exe')) {
                 if (Test-Path -LiteralPath (Join-Path $dir.FullName $py)) { return $dir.FullName }
             }
         }
@@ -422,7 +423,7 @@ function Get-B65ComfyRoot {
 function Get-B65ComfyPython {
     $root = Get-B65ComfyRoot
     if (-not $root) { return $null }
-    foreach ($py in @('python_embeded\python.exe', 'python_embedded\python.exe')) {
+    foreach ($py in @('python_embeded\python.exe', 'python_embedded\python.exe', 'python_standalone\python.exe')) {
         $candidate = Join-Path $root $py
         if (Test-Path -LiteralPath $candidate) { return $candidate }
     }
@@ -467,6 +468,27 @@ function Set-B65WorkflowValue {
 
 function Test-B65Workflow {
     param([Parameter(Mandatory = $true)]$Workflow)
+
+    # ComfyUI's object_info contains duplicate keys that differ only by case;
+    # PowerShell 5.1's ConvertFrom-Json refuses it. Validate in ComfyUI's Python.
+    $python = Get-B65ComfyPython
+    $helper = Join-Path (Get-B65Path 'scripts') 'comfy_validate.py'
+    if ($python -and (Test-Path -LiteralPath $helper)) {
+        $tmp = Join-Path (Get-B65Path 'runtime') 'workflow-validate.json'
+        Write-B65Json -Path $tmp -Value $Workflow
+        $videoCfg = Get-B65Config -Name video
+        $base = 'http://127.0.0.1:{0}' -f $videoCfg.port
+        $raw = & $python -s $helper $tmp $base 2>&1
+        $text = (($raw | Out-String).Trim())
+        try {
+            $obj = $text | ConvertFrom-Json
+        } catch {
+            throw "Workflow validation helper failed: $text"
+        }
+        return [pscustomobject]@{ Ok = [bool]$obj.ok; Issues = @($obj.issues) }
+    }
+
+    # Fallback (may fail on ComfyUI versions with case-duplicate object_info keys).
     $info = Invoke-B65Comfy -Path '/object_info' -TimeoutSec 180
     $issues = New-Object System.Collections.Generic.List[string]
     foreach ($prop in $Workflow.PSObject.Properties) {
@@ -484,8 +506,7 @@ function Test-B65Workflow {
         if ($classInfo.Value.input.optional) { $optional = @($classInfo.Value.input.optional.PSObject.Properties.Name) }
         foreach ($ip in $node.inputs.PSObject.Properties) {
             if ($ip.Name -eq '_meta') { continue }
-            $isLink = ($ip.Value -is [array])
-            if ($isLink) { continue }
+            if ($ip.Value -is [array]) { continue }
             if (($required -notcontains $ip.Name) -and ($optional -notcontains $ip.Name)) {
                 $issues.Add("Node $($prop.Name) ($class): unknown input '$($ip.Name)'")
             }
@@ -573,6 +594,26 @@ function Invoke-B65Download {
 function Test-B65Archive {
     param([Parameter(Mandatory = $true)][string]$Archive)
     if (-not (Test-Path -LiteralPath $Archive)) { throw "Archive not found: $Archive" }
+
+    # 7zr.exe is a reduced 7-Zip build: it opens 7z, not zip. Validate zip with .NET.
+    if ($Archive -like '*.zip') {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+        try {
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($Archive)
+            $zip.Dispose()
+            return $true
+        } catch {
+            throw "Archive is incomplete or corrupt: $Archive ($($_.Exception.Message))"
+        }
+    }
+
+    # Split 7z sets: .001 is the archive, .002.. are continuation volumes.
+    # Opening a continuation volume on its own always fails, so normalize to .001.
+    if ($Archive -match '\.7z\.\d{3}$') {
+        $firstVolume = $Archive -replace '\.7z\.\d{3}$', '.7z.001'
+        if (Test-Path -LiteralPath $firstVolume) { $Archive = $firstVolume }
+    }
+
     $seven = Get-B65SevenZip
     if (-not $seven) { throw '7-Zip not found. Run .\b65.ps1 setup first.' }
     & $seven t $Archive | Out-Null

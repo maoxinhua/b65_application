@@ -66,6 +66,16 @@ function Start-VideoInternal {
 
     $envMap = @{}
     foreach ($p in $videoCfg.env.PSObject.Properties) { $envMap[$p.Name] = [string]$p.Value }
+    # The YanWenKun XPU pack uses python_standalone + TorchHome + MinGit.
+    $envMap['TORCH_HOME'] = Join-Path $root 'TorchHome'
+    $envMap['HF_HUB_CACHE'] = Join-Path $root 'HuggingFaceHub'
+    $envMap['PYTHONPYCACHEPREFIX'] = Join-Path $root 'pycache'
+    $envMap['PATH'] = (@(
+        (Join-Path $root 'MinGit\cmd'),
+        (Join-Path $root 'python_standalone\Scripts'),
+        (Join-Path $root 'python_standalone\Library\bin'),
+        $env:PATH
+    ) -join ';')
 
     Write-B65Log ("Starting ComfyUI: {0} {1}" -f $python, ($startArgs -join ' ')) -Name 'comfy'
     $started = Start-B65Managed -Name 'comfy' -FilePath $python -ArgumentList $startArgs `

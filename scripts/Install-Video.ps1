@@ -30,33 +30,43 @@ if ($existing -and -not $Force) {
     $modelsZip = Join-Path $downloadDir 'models.zip'
     Invoke-B65Download -Uri "$ReleaseBase/models.zip" -OutFile $modelsZip -Force:$Force
 
+    # .002 is a continuation volume, not a standalone archive: validate the set via .001 only.
     foreach ($p in $parts) {
-        if (-not (Test-B65Archive -Archive (Join-Path $downloadDir $p))) {
-            throw "The ComfyUI archive failed validation: $p"
-        }
+        $partPath = Join-Path $downloadDir $p
+        if (-not (Test-Path -LiteralPath $partPath)) { throw "Missing ComfyUI volume: $partPath" }
     }
+    $firstPart = Join-Path $downloadDir $parts[0]
+    if (-not (Test-B65Archive -Archive $firstPart)) { throw "The ComfyUI archive failed validation: $firstPart" }
     if (-not (Test-B65Archive -Archive $modelsZip)) { throw "The ComfyUI model pack failed validation: $modelsZip" }
 
-    $tmp = Join-Path (Get-B65Path 'apps') '_comfy_tmp'
-    if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+    # Extract to a short path first: the pack contains torch license paths deeper
+    # than MAX_PATH, and 7-Zip/Remove-Item fail under apps\...\ when they are long.
+    $drive = Split-Path -Qualifier (Get-B65Root)
+    $stage = Join-Path $drive 'b65c'
+    if (Test-Path -LiteralPath $stage) { [System.IO.Directory]::Delete("\\?\$stage", $true) }
+    New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
     try {
         # 7-Zip follows the other split volumes from the same folder when it opens .7z.001.
         $seven = Get-B65SevenZip
-        New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-        Write-B65Log "Extracting $(Join-Path $downloadDir $parts[0])" -Name 'setup'
-        & $seven x (Join-Path $downloadDir $parts[0]) "-o$tmp" -y | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "7-Zip failed ($LASTEXITCODE) for the ComfyUI portable volumes; incomplete files are at $tmp" }
-        $portable = Get-ChildItem -LiteralPath $tmp -Recurse -Filter 'python_embeded' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-        if (-not $portable) {
-            $portable = Get-ChildItem -LiteralPath $tmp -Recurse -Filter 'python_embedded' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+        Write-B65Log "Extracting $(Join-Path $downloadDir $parts[0]) to $stage" -Name 'setup'
+        & $seven x (Join-Path $downloadDir $parts[0]) "-o$stage" -y | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "7-Zip failed ($LASTEXITCODE) for the ComfyUI portable volumes; incomplete files are at $stage" }
+
+        $portable = $null
+        foreach ($name in @('python_standalone', 'python_embeded', 'python_embedded')) {
+            $portable = Get-ChildItem -LiteralPath $stage -Recurse -Directory -Filter $name -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($portable) { break }
         }
-        if (-not $portable) { throw 'python_embeded folder not found in the ComfyUI pack.' }
-        if (-not (Test-Path -LiteralPath (Join-Path $portable.FullName 'python.exe'))) { throw "python.exe not found in the ComfyUI pack." }
+        if (-not $portable) { throw 'No python_standalone / python_embeded folder found in the ComfyUI pack.' }
+        if (-not (Test-Path -LiteralPath (Join-Path $portable.FullName 'python.exe'))) { throw 'python.exe not found in the ComfyUI pack.' }
+
+        $sourceRoot = $portable.Parent.FullName
+        if (-not (Test-Path -LiteralPath (Join-Path $sourceRoot 'ComfyUI\main.py'))) {
+            throw "ComfyUI\main.py not found in $sourceRoot"
+        }
 
         # Mark the new tree as incomplete until the optional model pack is expanded and linked.
-        $sourceRoot = $portable.Parent.FullName
         $stagedComplete = Join-Path $sourceRoot '.b65-comfy-install-complete'
         if (Test-Path -LiteralPath $stagedComplete) { Remove-Item -LiteralPath $stagedComplete -Force }
         $backup = $null
@@ -67,7 +77,7 @@ if ($existing -and -not $Force) {
                 Move-Item -LiteralPath $sourceRoot -Destination $dest
             } catch {
                 if (Test-Path -LiteralPath $backup) {
-                    Remove-Item -LiteralPath $dest -Recurse -Force -ErrorAction SilentlyContinue
+                    if (Test-Path -LiteralPath $dest) { [System.IO.Directory]::Delete("\\?\$dest", $true) }
                     Move-Item -LiteralPath $backup -Destination $dest
                 }
                 throw
@@ -75,9 +85,9 @@ if ($existing -and -not $Force) {
         } else {
             Move-Item -LiteralPath $sourceRoot -Destination $dest
         }
-        if ($backup -and (Test-Path -LiteralPath $backup)) { Remove-Item -LiteralPath $backup -Recurse -Force }
+        if ($backup -and (Test-Path -LiteralPath $backup)) { [System.IO.Directory]::Delete("\\?\$backup", $true) }
     } finally {
-        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
+        if (Test-Path -LiteralPath $stage) { [System.IO.Directory]::Delete("\\?\$stage", $true) }
     }
 }
 
@@ -85,11 +95,29 @@ if ($existing -and -not $Force) {
 $comfyDir = Join-Path $dest 'ComfyUI'
 if (Test-Path -LiteralPath $comfyDir) {
     if ($modelsZip -and (Test-Path -LiteralPath $modelsZip)) {
-        Write-B65Log 'Extracting models.zip into the ComfyUI folder ...' -Name 'setup'
+        Write-B65Log 'Extracting models.zip into a staging folder ...' -Name 'setup'
+        $modelTmp = Join-Path (Get-B65Path 'apps') '_comfy_models_tmp'
         try {
-            Expand-B65Zip -Archive $modelsZip -Destination $comfyDir
+            if (Test-Path -LiteralPath $modelTmp) { Remove-Item -LiteralPath $modelTmp -Recurse -Force }
+            Expand-B65Zip -Archive $modelsZip -Destination $modelTmp
+            $srcModels = Get-ChildItem -LiteralPath $modelTmp -Recurse -Directory -Filter 'models' -ErrorAction SilentlyContinue |
+                Where-Object { $_.Parent.Name -eq 'ComfyUI' } | Select-Object -First 1
+            if (-not $srcModels) {
+                $srcModels = Get-ChildItem -LiteralPath $modelTmp -Recurse -Directory -Filter 'models' -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+            }
+            if ($srcModels) {
+                $dstModels = Join-Path $comfyDir 'models'
+                New-Item -ItemType Directory -Force -Path $dstModels | Out-Null
+                Copy-Item -Path (Join-Path $srcModels.FullName '*') -Destination $dstModels -Recurse -Force
+                Write-B65Log ("Merged model pack from {0}" -f $srcModels.FullName) -Name 'setup'
+            } else {
+                Write-B65Log 'The model pack did not contain a models folder; skipped.' -Level WARN -Name 'setup'
+            }
         } catch {
             Write-B65Log ("The optional ComfyUI model pack could not be unpacked: " + $_.Exception.Message) -Level WARN -Name 'setup'
+        } finally {
+            if (Test-Path -LiteralPath $modelTmp) { Remove-Item -LiteralPath $modelTmp -Recurse -Force }
         }
     }
 }
