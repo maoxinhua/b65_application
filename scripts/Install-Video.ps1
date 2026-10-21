@@ -37,7 +37,7 @@ if (Test-Path -LiteralPath $dest) {
     Remove-Item -LiteralPath $dest -Recurse -Force
 }
 Move-Item -LiteralPath $sourceRoot -Destination $dest
-Remove-Item -LiteralPath $tmp -Recurse -Force
+if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
 
 # Optional model pack (checkpoints, VAEs and helper models from the same project).
 $comfyDir = Join-Path $dest 'ComfyUI'

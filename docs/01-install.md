@@ -35,25 +35,47 @@ cd E:\dsh_project\B65_graphic
 ```
 
 脚本从 GitHub Releases 下载 `XeStrata-0.1.45-1-windows-x64.7z` 并解压到 `apps\XeStrata`。
+**这一步不含模型**，先跑一次硬件检查：
 
-然后**手动完成一次 GUI 设置**（XeStrata 的模型下载/引擎准备是交互式的）：
+```powershell
+apps\XeStrata\xestrata-cli.exe --check
+```
+
+应看到 `Intel(R) Arc(TM) Pro B65 Graphics, 31 GB VRAM`、`i9-13900 (AVX2)`、`RAM: 64 GB`。
+
+然后二选一完成模型准备（约 68 GB，可断点续传）：
+
+**A. 命令行（推荐，模型落在工作路径）**
+
+```powershell
+.\b65.ps1 install llm -RunSetup
+```
+
+等价于：
+
+```powershell
+xestrata-cli.exe --setup --family qwen --model IQ2_XS --context 32768 \
+  --vision no --source modelscope \
+  --models-dir models\llm --data-dir runtime\xestrata --yes --no-browser
+```
+
+**B. 图形界面**
 
 1. 双击 `apps\XeStrata\xestrata.exe`；
-2. GPU 选择 `Intel Arc Pro B65`（必须是 **bmg-g31** 目标，不能是 bmg-g21）；
-3. 模型选 **IQ2_XS**（64 GB 内存下的安全档）；
-4. 上下文 **32768**；
-5. 图片输入先 **关闭**；
-6. 等模型下载完成（约 68 GB），能正常对话后关闭窗口。
+2. GPU 选 `Intel Arc Pro B65`（必须是 **bmg-g31**，不能是 bmg-g21）；
+3. 模型 **IQ2_XS**（64 GB 内存下的安全档；工具会推荐 IQ3_XXS，但 60 GB 在 Windows 上偏紧）；
+4. 上下文 **32768**；图片输入先关；
+5. 完成后把 `config\llm.json` 的 `modelsDir` / `dataDir` 改成 GUI 里实际用的目录（或留空用默认）。
 
-之后用脚本启动：
+之后启动：
 
 ```powershell
 .\b65.ps1 llm start
 .\b65.ps1 llm status
 ```
 
-> 如果 `--vram-reserve-mib` / `--memory-limit-mib` 不被当前版本接受，把 `config\llm.json` 里的
-> `optionalArgs` 改成 `false`，只用 model/context/host/port/api-key 启动。
+> `--vram-reserve-mib` 如果不被当前版本接受，把 `config\llm.json` 的 `optionalArgs` 改成 `false`。
+> `--memory-limit-mib` 这个参数并不存在；XeStrata 用 `--resident-budget-gib` 控制内存，本项目默认不传。
 
 ## 3. 安装视频（ComfyUI Intel XPU）
 

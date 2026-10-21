@@ -39,7 +39,7 @@
       "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
       "file": "split_files/vae/wan_2.1_vae.safetensors",
       "target": "models/comfyui/vae/wan_2.1_vae.safetensors",
-      "sizeGB": 0.3
+      "sizeGB": 0.25
     },
     {
       "id": "wan22-vae",
@@ -47,7 +47,7 @@
       "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
       "file": "split_files/vae/wan2.2_vae.safetensors",
       "target": "models/comfyui/vae/wan2.2_vae.safetensors",
-      "sizeGB": 1.4
+      "sizeGB": 1.35
     },
     {
       "id": "hunyuan-1080p-sr",

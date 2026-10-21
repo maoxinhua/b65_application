@@ -48,7 +48,7 @@ foreach ($f in $selected) {
         Write-B65Log ("Partial {0} ({1:N1} GB), resuming" -f $f.id, $actual) -Name 'models'
     }
     Write-B65Log ("Fetch {0}: {1} / {2}" -f $f.id, $f.repo, $f.file) -Name 'models'
-    $minBytes = [long]($expected * 0.8 * 1GB)
+    $minBytes = [long]($expected * 0.6 * 1GB)
     $endpoints = @($Endpoint)
     if ($Endpoint -match 'hf-mirror') { $endpoints += 'https://huggingface.co' }
     $lastError = $null

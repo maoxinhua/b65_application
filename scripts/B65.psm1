@@ -540,6 +540,14 @@ function Invoke-B65Download {
         Remove-Item -LiteralPath $OutFile -Force
     }
     $tmp = "$OutFile.part"
+    if (Test-Path -LiteralPath $tmp) {
+        $tmpLen = (Get-Item -LiteralPath $tmp).Length
+        if (($MinBytes -gt 0) -and ($tmpLen -ge $MinBytes)) {
+            Write-B65Log "Complete partial found, finishing: $tmp" -Name 'setup'
+            Move-Item -LiteralPath $tmp -Destination $OutFile -Force
+            return
+        }
+    }
     Write-B65Log "Downloading $Uri" -Name 'setup'
     $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
     if ($curl) {

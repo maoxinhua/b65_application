@@ -61,18 +61,34 @@ function Start-LlmInternal {
         $state.llm.apiKey = New-B65ApiKey
     }
 
+    # Refuse to start an empty model directory: --yes would otherwise trigger a 68 GB download.
+    if ($llm.modelsDir) {
+        $modelsDir = Resolve-B65Path -Path ([string]$llm.modelsDir)
+        $hasModel = $false
+        if (Test-Path -LiteralPath $modelsDir) {
+            $hasModel = [bool](Get-ChildItem -LiteralPath $modelsDir -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1)
+        }
+        if (-not $hasModel) {
+            throw "No model found in $modelsDir. Run: .\b65.ps1 install llm -RunSetup"
+        }
+    }
+
     $startArgs = @(
         '--model', [string]$llm.model,
         '--context', [string]$llm.context,
         '--host', [string]$llm.host,
         '--port', [string]$llm.port,
-        '--api-key', [string]$state.llm.apiKey
+        '--api-key', [string]$state.llm.apiKey,
+        '--no-browser',
+        '--yes'
     )
+    if (-not $llm.vision) { $startArgs += @('--vision', 'no') }
+    if ($llm.source) { $startArgs += @('--source', [string]$llm.source) }
+    if ($llm.dataDir) { $startArgs += @('--data-dir', (Resolve-B65Path -Path ([string]$llm.dataDir))) }
+    if ($llm.modelsDir) { $startArgs += @('--models-dir', (Resolve-B65Path -Path ([string]$llm.modelsDir))) }
+    if ([int]$llm.parallel -gt 1) { $startArgs += @('--parallel', [string]$llm.parallel) }
     if ($llm.optionalArgs) {
         $startArgs += @('--vram-reserve-mib', [string]$llm.vramReserveMiB)
-        if ([int]$llm.memoryLimitMiB -gt 0) {
-            $startArgs += @('--memory-limit-mib', [string]$llm.memoryLimitMiB)
-        }
     }
     foreach ($extra in @($llm.extraArgs)) {
         if ($null -ne $extra -and "$extra" -ne '') { $startArgs += [string]$extra }

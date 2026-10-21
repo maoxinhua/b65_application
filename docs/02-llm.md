@@ -20,17 +20,37 @@
 {
   "model": "IQ2_XS",
   "context": 32768,
+  "vision": false,
   "host": "0.0.0.0",
   "port": 8095,
   "vramReserveMiB": 1024,
-  "memoryLimitMiB": 50000,
+  "parallel": 1,
+  "source": "modelscope",
+  "dataDir": "runtime/xestrata",
+  "modelsDir": "models/llm",
   "optionalArgs": true
 }
 ```
 
-- `memoryLimitMiB = 50000` 给系统留 ~14 GB；如果桌面还是卡，降到 46000。
+- `dataDir` / `modelsDir` 让模型和配置落在工作路径下（约 68 GB）；留空则用 `%LOCALAPPDATA%\xestrata`。
+- `source = modelscope` 国内下载更快；可改 `huggingface` 或 `auto`。
 - `vramReserveMiB = 1024` 给 WDDM 桌面/浏览器留余量。
-- `optionalArgs = false` 可在引擎不认这些参数时退回最小参数集。
+- `vision = false` → 传 `--vision no`；要读图再改 true。
+- `optionalArgs = false` 可在引擎不认 `--vram-reserve-mib` 时退回最小参数集。
+- XeStrata **没有** `--memory-limit-mib`；要限内存用 `--resident-budget-gib`（写进 `extraArgs`），但 IQ2_XS 本身就要 48 GB，限太多会拖慢。
+
+`xestrata-cli.exe --check` 在本机的输出（实测）：
+
+```
+GPU 0: Intel(R) Arc(TM) Pro B65 Graphics, 31 GB VRAM
+RAM: 64 GB
+CPU: 13th Gen Intel(R) Core(TM) i9-13900 (AVX2)
+Q2_0 / IQ2_XS -> 48 GB: fits
+IQ3_XXS -> 60 GB: fits
+IQ3_S -> 62 GB: fits
+```
+
+工具会推荐 IQ3_XXS（60 GB），但 Windows 自身要占 4–6 GB，**IQ2_XS 才是 64 GB 机器的稳档**。
 
 ## 启停
 
