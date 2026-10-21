@@ -44,6 +44,23 @@ $gpu = Get-B65Gpu
 if ($gpu.Name) { Add-Row 'GPU' 'OK' ("{0}, {1} MB dedicated" -f $gpu.Name, $gpu.DedicatedMB) }
 else { Add-Row 'GPU' 'WARN' 'GPU performance counters returned no name' }
 
+$vcs = @(Get-CimInstance -ClassName Win32_VideoController -ErrorAction SilentlyContinue)
+$activeDisplay = $vcs | Where-Object { $_.CurrentHorizontalResolution -gt 0 } | Select-Object -First 1
+if ($activeDisplay) {
+    Add-Row 'Display' 'OK' ("{0} @ {1}x{2}" -f $activeDisplay.Name, $activeDisplay.CurrentHorizontalResolution, $activeDisplay.CurrentVerticalResolution)
+}
+$igpu = $vcs | Where-Object { $_.Name -match 'UHD Graphics' } | Select-Object -First 1
+if ($igpu) { Add-Row 'iGPU' 'OK' $igpu.Name }
+
+$ffQsv = Get-B65Ffmpeg
+if ($ffQsv) {
+    $qsvNames = @(& $ffQsv -hide_banner -encoders 2>$null | Select-String 'qsv' | ForEach-Object {
+        ($_.ToString().Trim() -split '\s+')[1]
+    })
+    if ($qsvNames.Count -gt 0) { Add-Row 'QSV encoders' 'OK' ($qsvNames -join ', ') }
+    else { Add-Row 'QSV encoders' 'MISSING' 'this FFmpeg build has no QSV' }
+}
+
 $settings = Get-B65Config -Name settings
 foreach ($p in @('llm', 'comfy', 'dashboard')) {
     $port = [int]$settings.ports.$p

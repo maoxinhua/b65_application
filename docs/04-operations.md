@@ -78,8 +78,10 @@ git commit -m "feat: ..."
 
 ## 版本升级
 
-- **XeStrata**：下载新 7z 到独立目录，`install llm -Version xe0.1.46-1 -Force`；模型和设置保留。
-- **ComfyUI**：整包替换 `apps\ComfyUI_windows_portable`，`extra_model_paths.yaml` 重新生成；模型在 `models\` 不受影响。
+- **XeStrata**：`install llm -Version xe0.1.46-1 -CheckUpdate` 只检查已安装版本；确认升级再使用
+  `-Version xe0.1.46-1 -Force`，新版会先解压到临时目录，完整后再替换引擎；模型和设置保留。
+- **ComfyUI**：`install video -Force` 先完整下载并校验，再切换安装目录；`extra_model_paths.yaml` 重新生成，
+  模型在 `models\` 不受影响。
 - **本仓库**：`git pull`，然后 `doctor` + `test-workflow`。
 
 ## 备份

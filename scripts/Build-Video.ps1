@@ -3,7 +3,10 @@
 param(
     [Parameter(Mandatory = $true)][string]$Manifest,
     [switch]$DryRun,
-    [string]$Out = ''
+    [string]$Output = '',
+    [ValidateSet('auto', 'libx264', 'h264_qsv', 'hevc_qsv')][string]$Encoder = 'auto',
+    [int]$QsvDevice = 1,
+    [int]$Quality = 18
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,6 +15,17 @@ Import-Module (Join-Path $PSScriptRoot 'B65.psm1') -Force
 $ff = Get-B65Ffmpeg
 if (-not $ff) {
     if ($DryRun) { $ff = 'ffmpeg' } else { throw 'FFmpeg not found. Run .\b65.ps1 setup.' }
+}
+
+$encoderName = $Encoder
+if ($Encoder -eq 'auto') { $encoderName = 'libx264' }
+$pixelFormat = 'yuv420p'
+if ($encoderName -like '*_qsv') {
+    $pixelFormat = 'nv12'
+    $videoCodecArgs = @('-qsv_device', [string]$QsvDevice, '-c:v', $encoderName,
+        '-global_quality', [string]$Quality, '-preset', 'veryfast')
+} else {
+    $videoCodecArgs = @('-c:v', $encoderName, '-preset', 'veryfast', '-crf', [string]$Quality)
 }
 
 $manifestPath = Resolve-B65Path -Path $Manifest
@@ -54,8 +68,8 @@ foreach ($scene in @($m.scenes)) {
             $img = $cardOut
             $frames = [int]($dur * $FPS)
             $vf = "scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},zoompan=z='min(zoom+0.0005,1.10)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=${W}x${H}:fps=${FPS},setsar=1"
-            $a = @('-y', '-loop', '1', '-i', $img, '-t', "$dur", '-vf', $vf,
-                '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-an', $target)
+            $a = @('-y', '-loop', '1', '-i', $img, '-t', "$dur", '-vf', $vf) +
+                $videoCodecArgs + @('-pix_fmt', $pixelFormat, '-an', $target)
             Invoke-Ffmpeg -FfArgs $a -Label "card $index"
         }
         'image' {
@@ -69,8 +83,8 @@ foreach ($scene in @($m.scenes)) {
             } else {
                 $vf = "scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0x0B1220,setsar=1"
             }
-            $a = @('-y', '-loop', '1', '-i', $img, '-t', "$dur", '-vf', $vf,
-                '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-an', $target)
+            $a = @('-y', '-loop', '1', '-i', $img, '-t', "$dur", '-vf', $vf) +
+                $videoCodecArgs + @('-pix_fmt', $pixelFormat, '-an', $target)
             Invoke-Ffmpeg -FfArgs $a -Label "image $index"
         }
         'clip' {
@@ -101,7 +115,7 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 $concatOut = Join-Path $buildDir 'concat.mp4'
 Invoke-Ffmpeg -FfArgs @('-y', '-f', 'concat', '-safe', '0', '-i', $listPath, '-c', 'copy', $concatOut) -Label 'concat'
 
-$final = if ($Out) { Resolve-B65Path -Path $Out } elseif ($m.output) { Resolve-B65Path -Path $m.output } else { Join-Path (Get-B65Path 'output') 'video.mp4' }
+$final = if ($Output) { Resolve-B65Path -Path $Output } elseif ($m.output) { Resolve-B65Path -Path $m.output } else { Join-Path (Get-B65Path 'output') 'video.mp4' }
 $finalDir = Split-Path -Parent $final
 if (-not (Test-Path -LiteralPath $finalDir)) { New-Item -ItemType Directory -Force -Path $finalDir | Out-Null }
 

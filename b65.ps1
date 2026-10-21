@@ -23,19 +23,37 @@ function Split-StepArgs {
     param([string[]]$Items = @())
     $named = @{}
     $positional = @()
+    $common = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ProgressAction',
+        'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable')
     for ($i = 0; $i -lt $Items.Count; $i++) {
         $item = $Items[$i]
-        if ($item -match '^-([A-Za-z][A-Za-z0-9]*)$') {
-            $key = $Matches[1]
+        if ($item -match '^--?([A-Za-z][A-Za-z0-9]*)$') {
+            $name = $Matches[1]
+            # Resolve short and partial parameter names through the child script's own parameter table.
+            $key = Find-StepParameter -Name $name
+            if (-not $key) { $key = $name }
+            $declared = $script:StepParameterTypes.ContainsKey($key)
+            $isSwitch = $declared -and ($script:StepParameterTypes[$key] -eq [System.Management.Automation.SwitchParameter])
             $nextIsValue = $false
             if ($i + 1 -lt $Items.Count) {
                 $next = $Items[$i + 1]
-                if (($next -notmatch '^-') -or ($next -match '^-?[0-9]+(\.[0-9]+)?$')) { $nextIsValue = $true }
+                $nextName = $next -replace '^--?', ''
+                $nextDeclared = -not $isSwitch -and [bool](Find-StepParameter -Name $nextName)
+                if (($next -notmatch '^-[A-Za-z]') -or ($next -match '^-?[0-9]+(\.[0-9]+)?$') -or ($declared -and -not $nextDeclared)) { $nextIsValue = $true }
+                if (-not $declared -and -not $nextIsValue) { $nextIsValue = $true }
             }
-            if ($nextIsValue) {
+            # If the following script declares this switch itself, PowerShell binds the name without an argument;
+            # that keeps values and switches unambiguous even when a positional value happens to follow a switch.
+            if ($isSwitch) {
+                $named[$key] = $true
+            } elseif ($declared -or $common -notcontains $key) {
+                if (-not $nextIsValue) {
+                    throw "Option -$key needs a value. Quote values that start with a dash."
+                }
                 $named[$key] = $Items[$i + 1]
                 $i++
             } else {
+                # A common parameter such as -Verbose is passed without a value by the child script's own declaration.
                 $named[$key] = $true
             }
         } else {
@@ -45,14 +63,35 @@ function Split-StepArgs {
     return [pscustomobject]@{ Named = $named; Positional = $positional }
 }
 
+function Find-StepParameter {
+    param([string]$Name)
+    return ($script:StepParameterTypes.Keys | Where-Object {
+        $_.Equals($Name, [StringComparison]::OrdinalIgnoreCase) -or
+        ($Name.Length -lt $_.Length -and $_.StartsWith($Name, [StringComparison]::OrdinalIgnoreCase))
+    } | Select-Object -First 1)
+}
+
 function Invoke-Step {
     param([string]$Name, [string[]]$StepArgs = @())
     $path = Join-Path $PSScriptRoot "scripts\$Name.ps1"
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing script: $path" }
-    $split = Split-StepArgs -Items $StepArgs
-    $named = $split.Named
-    $positional = $split.Positional
-    & $path @named @positional
+    # Child installers map expected failures to an actionable exception and use $LASTEXITCODE for programs.
+    # A Windows PowerShell warning written by a native program must not skip that handling first.
+    $oldErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $script:StepParameterTypes = @{}
+        $command = Get-Command -Name $path -ErrorAction Stop
+        foreach ($p in $command.Parameters.Values) {
+            $script:StepParameterTypes[$p.Name] = $p.ParameterType
+        }
+        $split = Split-StepArgs -Items $StepArgs
+        $named = $split.Named
+        $positional = $split.Positional
+        & $path @named @positional
+    } finally {
+        $ErrorActionPreference = $oldErrorPreference
+    }
 }
 
 function Show-Help {
@@ -72,6 +111,7 @@ function Show-Help {
     Write-Host '  card -Data .\config\cards\example.json'
     Write-Host '  build -Manifest .\projects\iot-demo\manifest.json'
     Write-Host '  test-workflow -Profile draft'
+    Write-Host '  test-qsv                    benchmark CPU vs B65 vs iGPU encoders'
     Write-Host '  doctor                      environment checks'
     Write-Host ''
 }
@@ -102,6 +142,7 @@ switch ($Command.ToLowerInvariant()) {
     'card'      { Invoke-Step -Name 'New-SpecCard' -StepArgs $Rest }
     'build'     { Invoke-Step -Name 'Build-Video' -StepArgs $Rest }
     'test-workflow' { Invoke-Step -Name 'Test-Workflow' -StepArgs $Rest }
+    'test-qsv'      { Invoke-Step -Name 'Test-Qsv' -StepArgs $Rest }
     'doctor'    { Invoke-Step -Name 'Doctor' -StepArgs $Rest }
     default     { Show-Help; throw "Unknown command: $Command" }
 }

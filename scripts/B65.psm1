@@ -401,12 +401,16 @@ function Get-B65Status {
 function Get-B65ComfyRoot {
     $videoCfg = Get-B65Config -Name video
     $configured = Resolve-B65Path -Path $videoCfg.root
-    if (Test-Path -LiteralPath (Join-Path $configured 'python_embeded\python.exe')) { return $configured }
-    if (Test-Path -LiteralPath (Join-Path $configured 'python_embedded\python.exe')) { return $configured }
+    if ((Test-Path -LiteralPath (Join-Path $configured 'python_embeded\python.exe')) -or
+        (Test-Path -LiteralPath (Join-Path $configured 'python_embedded\python.exe'))) { return $configured }
 
     $apps = Get-B65Path 'apps'
     if (Test-Path -LiteralPath $apps) {
-        foreach ($dir in (Get-ChildItem -LiteralPath $apps -Directory -Filter 'ComfyUI*' -ErrorAction SilentlyContinue)) {
+        $candidates = @(Get-ChildItem -LiteralPath $apps -Directory -Filter 'ComfyUI*' -ErrorAction SilentlyContinue | Sort-Object Name)
+        $preferred = Join-Path $apps 'ComfyUI_windows_portable'
+        if (Test-Path -LiteralPath $preferred) { $candidates = @($preferred) + @($candidates | Where-Object Name -ne 'ComfyUI_windows_portable') }
+        foreach ($dir in $candidates) {
+            $dir = Get-Item -LiteralPath $dir
             foreach ($py in @('python_embeded\python.exe', 'python_embedded\python.exe')) {
                 if (Test-Path -LiteralPath (Join-Path $dir.FullName $py)) { return $dir.FullName }
             }
@@ -537,24 +541,25 @@ function Invoke-B65Download {
             Write-B65Log "Exists, skip download: $OutFile" -Name 'setup'
             return
         }
+        if (-not $Force) {
+            Write-B65Log ("Incomplete download ({0} bytes, expected at least {1}); fetching it again: {2}" -f $len, $MinBytes, $OutFile) -Level WARN -Name 'setup'
+        }
         Remove-Item -LiteralPath $OutFile -Force
     }
     $tmp = "$OutFile.part"
+    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+    # curl -C - appends to existing output; a completed file that failed only archive validation must start over.
+    if ($Force -and (Test-Path -LiteralPath $tmp)) { Remove-Item -LiteralPath $tmp -Force }
     if (Test-Path -LiteralPath $tmp) {
         $tmpLen = (Get-Item -LiteralPath $tmp).Length
-        if (($MinBytes -gt 0) -and ($tmpLen -ge $MinBytes)) {
-            Write-B65Log "Complete partial found, finishing: $tmp" -Name 'setup'
-            Move-Item -LiteralPath $tmp -Destination $OutFile -Force
-            return
-        }
+        if (-not $curl) { Remove-Item -LiteralPath $tmp -Force }
+        elseif ($tmpLen -gt 0) { Write-B65Log ("Resuming download from {0} bytes" -f $tmpLen) -Name 'setup' }
     }
     Write-B65Log "Downloading $Uri" -Name 'setup'
-    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
     if ($curl) {
         & $curl.Source -L --fail --retry 5 --retry-all-errors --retry-delay 10 -C - -o $tmp $Uri
         if ($LASTEXITCODE -ne 0) { throw "curl failed ($LASTEXITCODE) for $Uri (partial kept at $tmp)" }
     } else {
-        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
         Invoke-WebRequest -Uri $Uri -OutFile $tmp -UseBasicParsing
     }
     if (-not (Test-Path -LiteralPath $tmp)) { throw "Download did not produce $tmp" }
@@ -563,6 +568,32 @@ function Invoke-B65Download {
         throw ("Downloaded file is too small: {0} bytes (expected at least {1}); partial kept at {2}" -f $size, $MinBytes, $tmp)
     }
     Move-Item -LiteralPath $tmp -Destination $OutFile -Force
+}
+
+function Test-B65Archive {
+    param([Parameter(Mandatory = $true)][string]$Archive)
+    if (-not (Test-Path -LiteralPath $Archive)) { throw "Archive not found: $Archive" }
+    $seven = Get-B65SevenZip
+    if (-not $seven) { throw '7-Zip not found. Run .\b65.ps1 setup first.' }
+    & $seven t $Archive | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Archive is incomplete or corrupt: $Archive (remove it and run the install again)" }
+    return $true
+}
+
+function Expand-B65Zip {
+    param(
+        [Parameter(Mandatory = $true)][string]$Archive,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+    if (-not (Test-Path -LiteralPath $Archive)) { throw "Archive not found: $Archive" }
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    Write-B65Log "Extracting $Archive" -Name 'setup'
+    try {
+        Expand-Archive -LiteralPath $Archive -DestinationPath $Destination -Force -ErrorAction Stop
+    } catch {
+        Write-B65Log ("Expand-Archive failed ({0}); retrying with 7-Zip" -f $_.Exception.Message) -Level WARN -Name 'setup'
+        Expand-B65SevenZip -Archive $Archive -Destination $Destination
+    }
 }
 
 function Expand-B65SevenZip {
@@ -575,7 +606,7 @@ function Expand-B65SevenZip {
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     Write-B65Log "Extracting $Archive" -Name 'setup'
     & $seven x $Archive "-o$Destination" -y | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "7-Zip failed ($LASTEXITCODE) for $Archive" }
+    if ($LASTEXITCODE -ne 0) { throw "7-Zip failed ($LASTEXITCODE) for $Archive; incomplete files are at $Destination" }
 }
 
 Export-ModuleMember -Function *

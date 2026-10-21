@@ -45,11 +45,17 @@ apps\XeStrata\xestrata-cli.exe --check
 
 然后二选一完成模型准备（约 68 GB，可断点续传）：
 
+`install llm -RunSetup` 可重复执行。已有 `apps\XeStrata\xestrata-cli.exe` 时不会重新下载或覆盖引擎；
+先安装引擎、下镜像中断后再运行同一条命令，会直接从模型准备阶段继续。
+
 **A. 命令行（推荐，模型落在工作路径）**
 
 ```powershell
 .\b65.ps1 install llm -RunSetup
 ```
+
+要使用 XeStrata 自带的推荐值确认更新，加 `-CheckUpdate`；不要直接重装来“修复”已存在的引擎。
+模型下载中断时重跑同一条命令即可；需要自己选择/回答 XeStrata 的参数时加 `-Interact`。
 
 等价于：
 

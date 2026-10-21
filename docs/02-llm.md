@@ -37,7 +37,7 @@
 - `vramReserveMiB = 1024` 给 WDDM 桌面/浏览器留余量。
 - `vision = false` → 传 `--vision no`；要读图再改 true。
 - `optionalArgs = false` 可在引擎不认 `--vram-reserve-mib` 时退回最小参数集。
-- XeStrata **没有** `--memory-limit-mib`；要限内存用 `--resident-budget-gib`（写进 `extraArgs`），但 IQ2_XS 本身就要 48 GB，限太多会拖慢。
+- XeStrata **没有** `--memory-limit-mib`；`--resident-budget-gib` 只适用于 UD-IQ4_XS / UD-Q4_K_XL 等预算型量化，对 IQ2_XS 不生效。IQ2_XS 本身就要 48 GB，限太多会拖慢。
 
 `xestrata-cli.exe --check` 在本机的输出（实测）：
 
@@ -127,6 +127,6 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8095/v1/chat/completions" `
 |---|---|
 | 端口没起来 | 看 `runtime\logs\llm.stderr.log`；多为参数不识别或模型未 setup |
 | 报 `bmg-g21` / no engine | 装错包；换 `bmg-g31` 的 XeStrata 构建 |
-| 启动后系统极慢 | 降 `memoryLimitMiB`，关浏览器；watchdog 会自动停 |
+| 启动后系统极慢 | 这个配置项不存在；关浏览器/编辑器、减少 `context`，watchdog 会在内存持续不足时停 LLM |
 | API 401 | 用 `status` 里最新的 Key；重启后 Key 不变 |
 | 局域网连不上 | 检查防火墙 8095、`host` 是否为 `0.0.0.0`、是否同一网段 |
