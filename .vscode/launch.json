@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "B65: Launch control panel",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/scripts/Start-Panel.ps1",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "createTemporaryIntegratedConsole": true
+    },
+    {
+      "name": "B65: Status",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/b65.ps1",
+      "args": ["status"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

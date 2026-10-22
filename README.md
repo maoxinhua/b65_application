@@ -1,5 +1,7 @@
 # B65 AI Workbench
 
+> 第一次在 VS Code 里运行？看 [RUN.md](RUN.md)。
+
 Windows + VS Code control plane for one **Intel Arc Pro B65 32 GB**:
 
 1. **LLM** — `Qwen3.8-Flash-Next IQ2_XS @ 32K` on **XeStrata** (Strata for Intel GPUs), with start/stop, RAM guard, LAN OpenAI-compatible API and token.

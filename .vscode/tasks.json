@@ -323,6 +323,10 @@
       "presentation": {
         "panel": "dedicated",
         "reveal": "always"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
       }
     },
     {
