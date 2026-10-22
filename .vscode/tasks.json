@@ -308,6 +308,24 @@
       }
     },
     {
+      "label": "B65: Control panel",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-STA",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\app\\B65Panel.ps1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "B65: Watch downloads",
       "type": "shell",
       "command": "powershell.exe",

@@ -31,6 +31,11 @@ if ($JobFile) {
     if ($jobData.prompt) { $Prompt = [string]$jobData.prompt }
     if ($jobData.negative) { $Negative = [string]$jobData.negative }
     if ($jobData.name) { $Name = [string]$jobData.name }
+    if ($jobData.width) { $Width = [int]$jobData.width }
+    if ($jobData.height) { $Height = [int]$jobData.height }
+    if ($jobData.frames) { $Frames = [int]$jobData.frames }
+    if ($jobData.steps) { $Steps = [int]$jobData.steps }
+    if ($null -ne $jobData.seed) { $Seed = [int]$jobData.seed }
 }
 if (-not $Image) { throw 'Image is required (or provide -Job with an image path).' }
 if (-not $Prompt) { throw 'Prompt is required (or provide -Job with a prompt).' }

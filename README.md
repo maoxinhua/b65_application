@@ -65,6 +65,19 @@ b65.ps1 ── scripts\B65.psm1 (state, metrics, process control)
 
 State and logs live in `runtime\` (gitignored): `state.json`, `health.json`, `logs\*.log`, `logs\metrics.jsonl`.
 
+## Windows control panel
+
+```powershell
+.\b65.ps1 panel
+```
+
+Or double-click `B65 Panel.cmd`, or run the VS Code task **B65: Control panel**.
+It is a PowerShell 5.1 + WinForms app: LLM lifecycle, ComfyUI, the
+draft → review → final → 1080p ad workflow, logs and an embedded terminal.
+See [docs/00-panel.md](docs/00-panel.md).
+
+![B65 Workbench](docs/panel.png)
+
 ## Commands
 
 | Command | Purpose |
@@ -80,6 +93,7 @@ State and logs live in `runtime\` (gitignored): `state.json`, `health.json`, `lo
 | `status [-Json]` | RAM/VRAM/process snapshot |
 | `watch -Target llm\|video` | resource watchdog in the foreground |
 | `dashboard` | web console on `127.0.0.1:8099` |
+| `panel` | native Windows control panel (WinForms, no extra runtime) |
 | `render -Profile ... -Image ... -Prompt ...` | submit a Wan2.2 workflow |
 | `card -Data ...` | render a 1920×1080 spec card |
 | `build -Manifest ...` | assemble the final video |

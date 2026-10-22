@@ -109,6 +109,7 @@ function Show-Help {
     Write-Host '  status [-Json]              RAM/VRAM/process snapshot'
     Write-Host '  watch -Target llm|video     run the resource watchdog in this terminal'
     Write-Host '  dashboard                   local web console on port 8099'
+    Write-Host '  panel                       native Windows control panel (WinForms)'
     Write-Host '  render -Profile ... -Image ... -Prompt ...'
     Write-Host '  card -Data .\config\cards\example.json'
     Write-Host '  build -Manifest .\projects\iot-demo\manifest.json'
@@ -143,6 +144,7 @@ switch ($Command.ToLowerInvariant()) {
     'status'    { Invoke-Step -Name 'Get-Status' -StepArgs $Rest }
     'watch'     { Invoke-Step -Name 'Watch-Resources' -StepArgs $Rest }
     'dashboard' { Invoke-Step -Name 'Start-Dashboard' -StepArgs $Rest }
+    'panel'     { Invoke-Step -Name 'Start-Panel' -StepArgs $Rest }
     'render'    { Invoke-Step -Name 'Invoke-Render' -StepArgs $Rest }
     'card'      { Invoke-Step -Name 'New-SpecCard' -StepArgs $Rest }
     'build'     { Invoke-Step -Name 'Build-Video' -StepArgs $Rest }
