@@ -1,5 +1,10 @@
 # 02 · LLM 运行手册
 
+> **端口可能不是 8095。** XeStrata 的 `setup.py` 有时会把 `server.py` 绑到另一个端口（例如 59643），
+> `--port 8095` 只记录在配置里。以 `.\b65.ps1 status`、面板 LLM 页的 Base URL，或
+> `curl http://127.0.0.1:<port>/health` 的实际结果为准；API Key 也必须带
+> `Authorization: Bearer <key>`，否则 401。
+
 ## 为什么是 IQ2_XS + 32K
 
 | 项 | 选择 | 原因 |
@@ -65,7 +70,7 @@ IQ3_S -> 62 GB: fits
 
 1. 如果 ComfyUI 在跑，先停掉；
 2. 生成/复用 40 位 API Key；
-3. 启动 `xestrata-cli.exe`，等 8095 端口；
+3. 启动 `xestrata-cli.exe`，等待引擎实际绑定的端口（可能是 8095，也可能是 59643 等）；
 4. 探测 `/v1/models`；
 5. 启动 watchdog（后台 PowerShell）；
 6. 打印本机/LAN 地址和 Key。
@@ -73,8 +78,8 @@ IQ3_S -> 62 GB: fits
 ## 局域网 API
 
 ```text
-OpenAI 兼容 : http://<LAN-IP>:8095/v1
-Anthropic   : http://<LAN-IP>:8095/v1/messages
+OpenAI 兼容 : http://<LAN-IP>:<实际端口>/v1
+Anthropic   : http://<LAN-IP>:<实际端口>/v1/messages
 API Key     : 见 llm start / status 输出
 ```
 
@@ -87,7 +92,7 @@ $body = @{
   messages = @(@{ role = "user"; content = "用三句话介绍 5G 模组" })
 } | ConvertTo-Json -Depth 5
 
-Invoke-RestMethod -Uri "http://127.0.0.1:8095/v1/chat/completions" `
+Invoke-RestMethod -Uri "http://127.0.0.1:<实际端口>/v1/chat/completions" `
   -Method Post -Headers @{ Authorization = "Bearer $key" } `
   -ContentType "application/json" -Body $body
 ```
@@ -129,4 +134,4 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8095/v1/chat/completions" `
 | 报 `bmg-g21` / no engine | 装错包；换 `bmg-g31` 的 XeStrata 构建 |
 | 启动后系统极慢 | 这个配置项不存在；关浏览器/编辑器、减少 `context`，watchdog 会在内存持续不足时停 LLM |
 | API 401 | 用 `status` 里最新的 Key；重启后 Key 不变 |
-| 局域网连不上 | 检查防火墙 8095、`host` 是否为 `0.0.0.0`、是否同一网段 |
+| 局域网连不上 | 检查防火墙实际端口、`host` 是否为 `0.0.0.0`、是否同一网段 |

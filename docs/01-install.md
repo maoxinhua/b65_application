@@ -129,13 +129,13 @@ xestrata-cli.exe --setup --family qwen --model IQ2_XS --context 32768 \
 
 ## 6. 局域网访问（可选）
 
-LLM 默认监听 `0.0.0.0:8095`。首次放行：
+LLM 默认配置监听 `0.0.0.0:8095`，但 XeStrata 的 `setup.py` 可能把 `server.py` 绑到其他端口；以 `.\b65.ps1 status` 或面板 LLM 页显示的端口为准。首次放行：
 
 ```powershell
 .\b65.ps1 llm start -OpenFirewall
 ```
 
-或手动在“Windows Defender 防火墙 → 入站规则”放行 TCP 8095（仅专用网络）。
+或手动在“Windows Defender 防火墙 → 入站规则”放行实际 TCP 端口（仅专用网络）。
 API 地址和 Key 在 `llm start` 输出里，也可以 `.\b65.ps1 status` 查看。
 
 ## 7. 目录与磁盘

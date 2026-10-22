@@ -25,8 +25,16 @@ function Get-LlmExe {
 
 function Stop-LlmInternal {
     $state = Get-B65State
-    if ([int]$state.llm.pid -gt 0) {
-        Stop-B65Managed -ProcessId ([int]$state.llm.pid) -Name 'llm' | Out-Null
+    $live = Get-B65LlmLive
+    $pids = @()
+    if ($live) {
+        $pids += [int]$live.cliPid
+        $pids += [int]$live.serverPid
+        $pids += [int]$live.strataPid
+    }
+    $pids += [int]$state.llm.pid
+    foreach ($pidToStop in @($pids | Where-Object { $_ -gt 0 } | Select-Object -Unique)) {
+        Stop-B65Managed -ProcessId $pidToStop -Name 'llm' -WaitSec 15 | Out-Null
     }
     if ([int]$state.llm.watchdogPid -gt 0) {
         Stop-B65Managed -ProcessId ([int]$state.llm.watchdogPid) -Name 'llm-watchdog' -WaitSec 5 | Out-Null
@@ -40,6 +48,19 @@ function Stop-LlmInternal {
 
 function Start-LlmInternal {
     $state = Get-B65State
+    $live = Get-B65LlmLive
+    if ($live -and $live.running) {
+        $state.llm.pid = [int]$live.pid
+        $state.llm.port = [int]$live.port
+        $state.llm.apiKey = [string]$live.apiKey
+        $state.llm.model = [string]$live.model
+        $state.llm.context = [int]$live.context
+        $state.llm.startedAt = $state.llm.startedAt
+        $state.mode = 'llm'
+        Save-B65State -State $state
+        Write-B65Log ("LLM already running (PID {0}, port {1}, model {2})." -f $live.pid, $live.port, $live.model) -Name 'llm'
+        return
+    }
     if (Test-B65Pid -ProcessId ([int]$state.llm.pid)) {
         Write-B65Log "LLM already running (PID $($state.llm.pid))" -Name 'llm'
         return
@@ -98,21 +119,38 @@ function Start-LlmInternal {
     $started = Start-B65Managed -Name 'llm' -FilePath $exe -ArgumentList $startArgs -WorkingDirectory (Split-Path -Parent $exe)
     $proc = $started.Process
 
-    $ok = Wait-B65Port -Port ([int]$llm.port) -TimeoutSec ([int]$llm.startTimeoutSec)
-    if (-not $ok) {
+    # XeStrata may bind a different port than --port (setup.py hands server.py its own choice).
+    $deadline = (Get-Date).AddSeconds([int]$llm.startTimeoutSec)
+    $live = $null
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 2
+        $live = Get-B65LlmLive
+        if ($live -and $live.ready) { break }
+        if (-not (Test-B65Pid -ProcessId $proc.Id) -and -not ($live -and $live.running)) {
+            $tail = (Get-B65LogTail -Name 'llm.stderr' -Lines 40) -join [Environment]::NewLine
+            throw "LLM process exited before opening a port. Last stderr:`n$tail"
+        }
+    }
+    if (-not $live -or -not $live.ready) {
         $tail = (Get-B65LogTail -Name 'llm.stderr' -Lines 40) -join [Environment]::NewLine
         Stop-B65Managed -ProcessId $proc.Id -Name 'llm' -WaitSec 5 | Out-Null
-        throw "LLM did not open port $($llm.port). Last stderr:`n$tail"
+        throw "LLM did not become healthy within $($llm.startTimeoutSec)s. Last stderr:`n$tail"
     }
 
-    $headers = @{ Authorization = "Bearer $($state.llm.apiKey)" }
-    $healthUri = 'http://127.0.0.1:{0}{1}' -f $llm.port, $llm.healthPath
+    $actualPort = [int]$live.port
+    $actualKey = if ($live.apiKey) { [string]$live.apiKey } else { [string]$state.llm.apiKey }
+    $actualModel = if ($live.model) { [string]$live.model } else { [string]$llm.model }
+    $actualContext = if ($live.context -gt 0) { [int]$live.context } else { [int]$llm.context }
+
+    $headers = @{ Authorization = "Bearer $actualKey" }
+    $healthUri = 'http://127.0.0.1:{0}{1}' -f $actualPort, $llm.healthPath
     $healthy = Wait-B65Http -Uri $healthUri -TimeoutSec 60 -Headers $headers
 
     $state.llm.pid = $proc.Id
-    $state.llm.port = [int]$llm.port
-    $state.llm.model = [string]$llm.model
-    $state.llm.context = [int]$llm.context
+    $state.llm.port = $actualPort
+    $state.llm.apiKey = $actualKey
+    $state.llm.model = $actualModel
+    $state.llm.context = $actualContext
     $state.llm.startedAt = (Get-Date).ToString('o')
     $state.mode = 'llm'
     Save-B65State -State $state
@@ -121,7 +159,7 @@ function Start-LlmInternal {
         try {
             if (-not (Get-NetFirewallRule -DisplayName 'B65 LLM API' -ErrorAction SilentlyContinue)) {
                 New-NetFirewallRule -DisplayName 'B65 LLM API' -Direction Inbound -Protocol TCP `
-                    -LocalPort ([int]$llm.port) -Action Allow -Profile Private | Out-Null
+                    -LocalPort $actualPort -Action Allow -Profile Private | Out-Null
             }
         } catch {
             Write-B65Log "Firewall rule failed: $($_.Exception.Message)" -Level WARN -Name 'llm'
@@ -141,9 +179,10 @@ function Start-LlmInternal {
     $lanIp = Get-B65LanIp
     Write-Host ''
     Write-Host 'LLM is up.' -ForegroundColor Green
-    Write-Host ("  Local : http://127.0.0.1:{0}/v1" -f $llm.port)
-    Write-Host ("  LAN   : http://{0}:{1}/v1" -f $lanIp, $llm.port)
-    Write-Host ("  Key   : {0}" -f $state.llm.apiKey)
+    Write-Host ("  Local : http://127.0.0.1:{0}/v1" -f $actualPort)
+    Write-Host ("  LAN   : http://{0}:{1}/v1" -f $lanIp, $actualPort)
+    Write-Host ("  Model : {0}" -f $actualModel)
+    Write-Host ("  Key   : {0}" -f $actualKey)
     Write-Host ("  Health: {0}" -f $(if ($healthy) { 'ok' } else { 'port open, /v1/models not confirmed' }))
     Write-Host ''
 }

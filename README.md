@@ -25,7 +25,7 @@ Open the folder in VS Code, then run the tasks (`Terminal -> Run Task`) or use a
 .\b65.ps1 install llm -RunSetup # one-time: IQ2_XS + 32K + ModelScope (~68 GB)
 .\b65.ps1 install video         # ComfyUI Intel XPU portable pack
 
-.\b65.ps1 llm start             # waits for :8095, prints LAN URL + API key
+.\b65.ps1 llm start             # waits for the engine, prints actual LAN URL + API key
 .\b65.ps1 status                # RAM / VRAM / processes
 .\b65.ps1 dashboard             # http://127.0.0.1:8099
 

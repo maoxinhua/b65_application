@@ -345,14 +345,92 @@ function Get-B65ProcessStats {
     }
 }
 
+function Get-B65LlmLive {
+    # XeStrata's setup.py may hand server.py a different port than --port.
+    # Detect the live engine from process command lines + /health instead of trusting state.json.
+    $procs = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -in @('xestrata-cli.exe', 'python.exe', 'strata.exe') })
+    $cli = $procs | Where-Object { $_.Name -eq 'xestrata-cli.exe' -and $_.CommandLine -match '--model' } | Select-Object -First 1
+    $srv = $procs | Where-Object { $_.Name -eq 'python.exe' -and $_.CommandLine -match 'serve[\\/]server\.py' } | Select-Object -First 1
+    $strata = $procs | Where-Object { $_.Name -eq 'strata.exe' } | Select-Object -First 1
+    if (-not $cli -and -not $srv) { return $null }
+
+    $apiKey = ''
+    $ctx = 0
+    $model = ''
+    $port = 0
+    $configPath = ''
+    if ($cli) {
+        if ($cli.CommandLine -match '--api-key\s+("[^"]+"|\S+)') { $apiKey = $Matches[1].Trim('"') }
+        if ($cli.CommandLine -match '--context\s+(\d+)') { $ctx = [int]$Matches[1] }
+        if ($cli.CommandLine -match '--model\s+("[^"]+"|\S+)') { $model = $Matches[1].Trim('"') }
+        if ($cli.CommandLine -match '--port\s+(\d+)') { $port = [int]$Matches[1] }
+    }
+    if ($srv) {
+        if ($srv.CommandLine -match '--port\s+(\d+)') { $port = [int]$Matches[1] }
+        if ($srv.CommandLine -match '--config\s+("[^"]+"|\S+)') { $configPath = $Matches[1].Trim('"') }
+    }
+    if ($configPath -and (Test-Path -LiteralPath $configPath)) {
+        try {
+            $cfg = Read-B65Json -Path $configPath
+            if (-not $apiKey -and $cfg.api_key) { $apiKey = [string]$cfg.api_key }
+            if (-not $model -and $cfg.model_name) { $model = [string]$cfg.model_name }
+            if ($port -le 0 -and $cfg.port) { $port = [int]$cfg.port }
+        } catch { }
+    }
+
+    $candidates = @($port)
+    if ($cli -and $cli.CommandLine -match '--port\s+(\d+)') { $candidates += [int]$Matches[1] }
+    $candidates += 8095
+    $candidates = @($candidates | Where-Object { $_ -gt 0 } | Select-Object -Unique)
+
+    $health = $null
+    $livePort = 0
+    foreach ($p in $candidates) {
+        try {
+            $h = Invoke-RestMethod -Uri ('http://127.0.0.1:{0}/health' -f $p) -TimeoutSec 2
+            if ($h -and $h.status -eq 'ok') { $health = $h; $livePort = $p; break }
+        } catch { }
+    }
+    if ($livePort -gt 0) { $port = $livePort }
+    if ($health) {
+        if ($health.model) { $model = [string]$health.model }
+        if ($health.max_context) { $ctx = [int]$health.max_context }
+    }
+
+    return [pscustomobject]@{
+        running       = $true
+        ready         = [bool]$health
+        pid           = if ($srv) { [int]$srv.ProcessId } elseif ($cli) { [int]$cli.ProcessId } else { 0 }
+        cliPid        = if ($cli) { [int]$cli.ProcessId } else { 0 }
+        serverPid     = if ($srv) { [int]$srv.ProcessId } else { 0 }
+        strataPid     = if ($strata) { [int]$strata.ProcessId } else { 0 }
+        port          = [int]$port
+        model         = $model
+        context       = [int]$ctx
+        apiKey        = $apiKey
+        apiKeyRequired = if ($health) { [bool]$health.api_key } else { $false }
+        configPath    = $configPath
+        health        = $health
+    }
+}
+
 function Get-B65Status {
     $settings = Get-B65Config -Name settings
     $state = Get-B65State
     $mem = Get-B65Memory
     $gpu = Get-B65Gpu
 
-    $llmAlive = Test-B65Pid -ProcessId ([int]$state.llm.pid)
+    $live = Get-B65LlmLive
+    $llmAlive = [bool]$live
     $videoAlive = Test-B65Pid -ProcessId ([int]$state.video.pid)
+    $llmPid = if ($live) { [int]$live.pid } else { [int]$state.llm.pid }
+    $llmPort = if ($live -and $live.port -gt 0) { [int]$live.port } else { [int]$state.llm.port }
+    $llmModel = if ($live -and $live.model) { [string]$live.model } else { $state.llm.model }
+    $llmCtx = if ($live -and $live.context -gt 0) { [int]$live.context } else { [int]$state.llm.context }
+    $llmKey = if ($live -and $live.apiKey) { [string]$live.apiKey } else { $state.llm.apiKey }
+    $llmVramPid = if ($live -and $live.strataPid -gt 0) { [int]$live.strataPid } elseif ($llmPid -gt 0) { $llmPid } else { 0 }
+    $mode = if ($live) { 'llm' } else { $state.mode }
 
     $health = $null
     $healthPath = Join-Path (Get-B65Path 'runtime') 'health.json'
@@ -366,20 +444,22 @@ function Get-B65Status {
 
     return [pscustomobject]@{
         updatedAt = (Get-Date).ToString('o')
-        mode      = $state.mode
+        mode      = $mode
         lanIp     = (Get-B65LanIp)
         memory    = $mem
         gpu       = $gpu
         llm       = [pscustomobject]@{
             running   = $llmAlive
-            pid       = [int]$state.llm.pid
-            port      = [int]$state.llm.port
-            model     = $state.llm.model
-            context   = [int]$state.llm.context
+            ready     = if ($live) { [bool]$live.ready } else { $false }
+            pid       = $llmPid
+            port      = $llmPort
+            model     = $llmModel
+            context   = $llmCtx
             startedAt = $state.llm.startedAt
-            apiKey    = $state.llm.apiKey
-            stats     = (Get-B65ProcessStats -ProcessId ([int]$state.llm.pid))
-            vramMB    = (Get-B65ProcessVramMB -ProcessId ([int]$state.llm.pid))
+            apiKey    = $llmKey
+            apiKeyRequired = if ($live) { [bool]$live.apiKeyRequired } else { $false }
+            stats     = (Get-B65ProcessStats -ProcessId $llmPid)
+            vramMB    = (Get-B65ProcessVramMB -ProcessId $llmVramPid)
         }
         video     = [pscustomobject]@{
             running   = $videoAlive
@@ -391,7 +471,7 @@ function Get-B65Status {
         }
         watchdog  = $health
         ports     = [pscustomobject]@{
-            llm       = (Test-B65Port -Port ([int]$settings.ports.llm))
+            llm       = (Test-B65Port -Port $llmPort)
             comfy     = (Test-B65Port -Port ([int]$settings.ports.comfy))
             dashboard = (Test-B65Port -Port ([int]$settings.ports.dashboard))
         }

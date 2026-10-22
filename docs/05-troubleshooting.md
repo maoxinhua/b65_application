@@ -16,7 +16,7 @@
 | 报缺少 `VCRUNTIME140.dll` | 缺 VC++ | 装 [VC++ x64](https://aka.ms/vs/17/release/vc_redist.x64.exe) |
 | 启动即退出 | 参数不识别 | 把 `config\llm.json` 的 `optionalArgs` 改 `false`；看 `runtime\logs\llm.stderr.log` |
 | 提示 `bmg-g21` / no engine | 装了 B60/B580 的包 | 换 `bmg-g31` 的 XeStrata 构建（B65/B70 同核心） |
-| 端口 8095 没起来 | 模型未 setup / 内存不足 | 先跑一次 `xestrata.exe` 完成下载；看 stderr |
+| 端口 8095 没起来 | XeStrata 绑到了别的端口，或模型未 setup / 内存不足 | 看 `.\b65.ps1 status` 的实际端口；先跑一次 `xestrata.exe` 完成下载；看 stderr |
 | 系统变卡、风扇狂转 | IQ2_XS 锁了 ~48 GB | 关浏览器/编辑器；降低 `context`；watchdog 会在 <4 GB 时停 |
 | API 返回 401 | Key 不对 | 用 `.\b65.ps1 status` 里的 Key；Key 存在 `runtime\state.json` |
 | 局域网连不上 | 防火墙/绑定地址 | `llm start -OpenFirewall`；确认 `host=0.0.0.0`；同一网段 |

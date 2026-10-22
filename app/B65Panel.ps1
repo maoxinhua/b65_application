@@ -262,7 +262,11 @@ function Stop-Llm { Start-Action -Label '停止 LLM' -ActionArgs @('llm', 'stop'
 function Restart-Llm { Start-Action -Label '重启 LLM' -ActionArgs @('llm', 'restart') }
 function Start-Video { Start-Action -Label '启动 ComfyUI' -ActionArgs @('video', 'start') }
 function Stop-Video { Start-Action -Label '停止 ComfyUI' -ActionArgs @('video', 'stop') }
-function Open-Llm { if (Test-B65Port -Port 8095) { Start-Process 'http://127.0.0.1:8095' } else { Add-Log 'LLM 未运行。' } }
+function Open-Llm {
+    $port = if ($script:LastLlmPort) { [int]$script:LastLlmPort } else { 8095 }
+    if (Test-B65Port -Port $port) { Start-Process ("http://127.0.0.1:{0}" -f $port) }
+    else { Add-Log "LLM 未运行（端口 $port 未监听）。" }
+}
 function Open-Video { if (Test-B65Port -Port 8188) { Start-Process 'http://127.0.0.1:8188' } else { Add-Log 'ComfyUI 未运行。' } }
 
 function Cancel-Render {
@@ -299,6 +303,7 @@ function Update-Status {
     $script:VideoPid.Text = [string]$st.video.pid
     $script:VideoPort.Text = [string]$st.video.port
     $script:VideoVram.Text = ('{0} MB' -f $st.video.vramMB)
+    $script:LastLlmPort = [int]$st.llm.port
     $script:ApiUrl.Text = 'http://{0}:{1}/v1' -f $st.lanIp, $st.llm.port
     $script:ApiKey.Text = if ($st.llm.apiKey) { [string]$st.llm.apiKey } else { '(none)' }
 }
@@ -523,7 +528,7 @@ $llm.Controls.Add($api)
 
 $help = New-Card -X 606 -Y 12 -W 580 -H 434 -Title '工作方式'
 $helpText = @"
-1. 点“加载 / 启动”：XeStrata 加载 IQ2_XS 到 B65，API 在 0.0.0.0:8095。
+1. 点“加载 / 启动”：XeStrata 加载 IQ2_XS 到 B65；API 端口以本页“端口 / Base URL”为准（可能不是 8095）。
 2. 第一次加载会建立专家缓存，耗时较长；看下方 ACTIVITY LOG。
 3. “卸载 / 停止”会释放显存，再切到视频。
 4. API 兼容 OpenAI：POST /v1/chat/completions。
