@@ -1,0 +1,16 @@
+# WSL2 DSH (web profile) route for the local XeStrata IQ3_XXS server.
+# Copy into /home/<you>/.dsh/profiles/web/cordis.patch.yml under
+# llm-pi-ai.config.providers, then restart WSL2 DSH if the picker does not refresh.
+# WSL2 uses mirrored networking; 127.0.0.1 reaches the Windows 8095 listener.
+qwen38-flash-next:
+  displayName: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
+  apiKeyEnv: QWEN38_FLASH_NEXT_API_KEY
+  api: openai-completions
+  baseURL: http://127.0.0.1:8095/v1
+  models:
+    - id: qwen3.8-flash-next-iq3_xxs
+      name: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
+      contextWindow: 32768
+      maxTokens: 8192
+      input:
+        - text

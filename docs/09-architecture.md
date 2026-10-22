@@ -177,12 +177,13 @@ xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
 
 | 文件 | 内容 |
 |---|---|
-| `config\llm.json` | 模型、context、lowRam、kv、noWarmup、端口、API 参数 |
+| `config\llm.json` | 模型、别名、context、lowRam、kv、noWarmup、端口、API 参数 |
 | `config\video.json` | ComfyUI 根目录、端口、启动参数 |
 | `config\settings.json` | 端口、watchdog 阈值 |
 | `config\models.json` | 视频模型清单 |
 | `config\profiles\video.*.json` | 工作流节点映射 |
-| `config\dsh.qwen38-flash-next.yml` | DSH 路由模板 |
+| `config\dsh.qwen38-flash-next.yml` | Windows DSH 路由模板 |
+| `config\dsh.wsl.qwen38-flash-next.yml` | WSL2 DSH 路由模板 |
 | `runtime\state.json` | 当前 PID/端口/Key/模型/模式（gitignored） |
 | `runtime\health.json` | watchdog 最新内存/VRAM/动作（gitignored） |
 | `runtime\logs\*.log` | 所有动作/引擎日志（gitignored） |
@@ -190,28 +191,44 @@ xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
 
 ## 7. DSH 集成
 
-Windows DSH 配置在 `C:\Users\<you>\.dsh`，不属于本仓库；仓库只提供模板。
+同一台机器有两个独立的 DSH 配置：
 
-当前路由：
+| 运行位置 | 配置文件 | baseURL |
+|---|---|---|
+| **Windows DSH** | `C:\Users\<you>\.dsh\cordis.patch.yml` | `http://10.88.115.60:8095/v1` |
+| **WSL2 DSH（web）** | `/home/<you>/.dsh/profiles/web/cordis.patch.yml` | `http://127.0.0.1:8095/v1` |
+
+两者都指向同一个 XeStrata 实例，只是网络路径不同：
+
+- WSL2 使用 **mirrored networking**，`127.0.0.1:8095` 可以直接到 Windows 服务；
+- WSL2 里访问 `10.88.115.60:8095` 实测被拒（防火墙/镜像细节），所以 WSL 路由用 localhost；
+- Windows DSH 用 LAN IP，局域网其他机器也可用。
+
+### 路由（两边同名）
 
 ```yaml
 qwen38-flash-next:
-  displayName: Qwen3.8-Flash-Next IQ3_XXS (local XeStrata)
+  displayName: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
   apiKeyEnv: QWEN38_FLASH_NEXT_API_KEY
   api: openai-completions
-  baseURL: http://10.88.115.60:8095/v1
+  # Windows: http://10.88.115.60:8095/v1
+  # WSL2:    http://127.0.0.1:8095/v1
+  baseURL: http://127.0.0.1:8095/v1
   models:
     - id: qwen3.8-flash-next-iq3_xxs
-      name: Qwen3.8-Flash-Next IQ3_XXS
+      name: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
       contextWindow: 32768
       maxTokens: 8192
       input: [text]
 ```
 
-- Key 放在 `.credentials.yaml`，不要提交；
-- Windows DSH 与 WSL2 相互独立：`wsl --shutdown` 不会停 Windows DSH；
-- 若从 Ubuntu 里启动 `dsh`，关 WSL 会停掉它；
-- 改 `context` 后同步改 DSH 的 `contextWindow`，并重启 DSH。
+### 关键点
+
+- `id` 必须是服务端真实 id `qwen3.8-flash-next-iq3_xxs`；`name/displayName` 才是 `13900_...`；
+- Key 放在各自的 `.credentials.yaml`，env 名都是 `QWEN38_FLASH_NEXT_API_KEY`；
+- WSL2 改动的是 `profiles/web/cordis.patch.yml`，已备份为 `.bak.<时间>`；
+- 改 `context` 后同步改 DSH 的 `contextWindow`；
+- 改完如果模型选择器没刷新，重启对应 DSH（Windows 或 WSL）。
 
 ## 8. 资源边界
 

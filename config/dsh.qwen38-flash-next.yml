@@ -1,14 +1,15 @@
-# DSH custom route for the local XeStrata IQ3_XXS server.
+# Windows DSH route for the local XeStrata IQ3_XXS server.
+# WSL2 variant: dsh.wsl.qwen38-flash-next.yml (baseURL 127.0.0.1).
 # Copy under the llm-pi-ai provider catalog in C:\Users\<you>\.dsh\cordis.patch.yml,
 # then restart Windows DSH. The API key stays in .credentials.yaml.
 qwen38-flash-next:
-  displayName: Qwen3.8-Flash-Next IQ3_XXS (local XeStrata)
+  displayName: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
   apiKeyEnv: QWEN38_FLASH_NEXT_API_KEY
   api: openai-completions
   baseURL: http://10.88.115.60:8095/v1
   models:
     - id: qwen3.8-flash-next-iq3_xxs
-      name: Qwen3.8-Flash-Next IQ3_XXS
+      name: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
       contextWindow: 32768
       maxTokens: 8192
       input:

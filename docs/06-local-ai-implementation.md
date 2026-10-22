@@ -68,6 +68,7 @@ Set-Location E:\dsh_project\B65_graphic
 ```json
 {
   "model": "IQ3_XXS",
+  "modelAlias": "13900_qwen3.8_flash_next_XEStrata_IQ3_XXS",
   "context": 32768,
   "contextPresets": [32768, 65536, 131072, 262144],
   "lowRam": "mmap",

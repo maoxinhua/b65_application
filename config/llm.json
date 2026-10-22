@@ -1,57 +1,56 @@
 {
-    "exe":  "apps/XeStrata/xestrata-cli.exe",
-    "gui":  "apps/XeStrata/xestrata.exe",
-    "model":  "IQ3_XXS",
-    "context":  32768,
-    "vision":  false,
-    "host":  "0.0.0.0",
-    "port":  8095,
-    "vramReserveMiB":  1024,
-    "parallel":  1,
-    "source":  "modelscope",
-    "dataDir":  "runtime/xestrata",
-    "modelsDir":  "models/llm",
-    "startTimeoutSec":  600,
-    "healthPath":  "/v1/models",
-    "optionalArgs":  true,
-    "extraArgs":  [
-
-                  ],
-    "modelCatalog":  {
-                         "IQ2_XS":  {
-                                        "label":  "Fast / 48 GB RAM",
-                                        "ramGB":  48,
-                                        "sizeGB":  68,
-                                        "quality":  "baseline",
-                                        "note":  "Fastest, lower quality; keeps 64 GB machines comfortable"
-                                    },
-                         "IQ3_XXS":  {
-                                         "label":  "Balanced / 60 GB RAM",
-                                         "ramGB":  60,
-                                         "sizeGB":  76,
-                                         "quality":  "high",
-                                         "note":  "Recommended; 3-bit, noticeably better than IQ2_XS"
-                                     },
-                         "IQ3_S":  {
-                                       "label":  "Max / 62 GB RAM",
-                                       "ramGB":  62,
-                                       "sizeGB":  84,
-                                       "quality":  "max",
-                                       "note":  "Best quality; 64 GB PC with little else running"
-                                   }
-                     },
-    "lowRam":  "mmap",
-    "residentBudgetGiB":  0,
-    "ropeScaling":  "none",
-    "maxOutputTokens":  8192,
-    "temperature":  0.7,
-    "topP":  0.95,
-    "contextPresets":  [
-                           32768,
-                           65536,
-                           131072,
-                           262144
-                       ],
-    "noWarmup":  true,
-    "kv":  "int8"
+  "exe": "apps/XeStrata/xestrata-cli.exe",
+  "gui": "apps/XeStrata/xestrata.exe",
+  "model": "IQ3_XXS",
+  "context": 32768,
+  "vision": false,
+  "host": "0.0.0.0",
+  "port": 8095,
+  "vramReserveMiB": 1024,
+  "parallel": 1,
+  "source": "modelscope",
+  "dataDir": "runtime/xestrata",
+  "modelsDir": "models/llm",
+  "startTimeoutSec": 600,
+  "healthPath": "/v1/models",
+  "optionalArgs": true,
+  "extraArgs": [],
+  "modelCatalog": {
+    "IQ2_XS": {
+      "label": "Fast / 48 GB RAM",
+      "ramGB": 48,
+      "sizeGB": 68,
+      "quality": "baseline",
+      "note": "Fastest, lower quality; keeps 64 GB machines comfortable"
+    },
+    "IQ3_XXS": {
+      "label": "Balanced / 60 GB RAM",
+      "ramGB": 60,
+      "sizeGB": 76,
+      "quality": "high",
+      "note": "Recommended; 3-bit, noticeably better than IQ2_XS"
+    },
+    "IQ3_S": {
+      "label": "Max / 62 GB RAM",
+      "ramGB": 62,
+      "sizeGB": 84,
+      "quality": "max",
+      "note": "Best quality; 64 GB PC with little else running"
+    }
+  },
+  "lowRam": "mmap",
+  "residentBudgetGiB": 0,
+  "ropeScaling": "none",
+  "maxOutputTokens": 8192,
+  "temperature": 0.7,
+  "topP": 0.95,
+  "contextPresets": [
+    32768,
+    65536,
+    131072,
+    262144
+  ],
+  "noWarmup": true,
+  "kv": "int8",
+  "modelAlias": "13900_qwen3.8_flash_next_XEStrata_IQ3_XXS"
 }

@@ -263,6 +263,7 @@ switch ($Action) {
             model    = $s.llm.model
             apiKey   = $s.llm.apiKey
             context  = $s.llm.context
+            alias    = (Get-B65Config -Name llm).modelAlias
             maxOutputTokens = (Get-B65Config -Name llm).maxOutputTokens
             lowRam   = (Get-B65Config -Name llm).lowRam
             kv       = (Get-B65Config -Name llm).kv

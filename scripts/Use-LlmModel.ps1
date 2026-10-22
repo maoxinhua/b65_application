@@ -22,6 +22,7 @@ if (-not $gguf -or $gguf.Count -eq 0) {
 }
 
 $cfg.model = $Model
+$cfg | Add-Member -NotePropertyName modelAlias -NotePropertyValue ("13900_qwen3.8_flash_next_XEStrata_" + $Model) -Force
 if ($Context -gt 0) { $cfg.context = $Context }
 if ($LowRam) {
     $cfg.lowRam = $LowRam
