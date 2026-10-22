@@ -38,6 +38,6 @@
       "note": "Best quality; 64 GB PC with little else running"
     }
   },
-  "lowRam": "on",
+  "lowRam": "mmap",
   "residentBudgetGiB": 0
 }

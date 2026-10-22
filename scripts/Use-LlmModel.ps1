@@ -20,7 +20,7 @@ if (-not $gguf -or $gguf.Count -eq 0) {
 
 $cfg.model = $Model
 if ($Context -gt 0) { $cfg.context = $Context }
-$cfg | Add-Member -NotePropertyName lowRam -NotePropertyValue $(if ($Model -eq 'IQ2_XS') { 'auto' } else { 'on' }) -Force
+$cfg | Add-Member -NotePropertyName lowRam -NotePropertyValue $(if ($Model -eq 'IQ2_XS') { 'auto' } else { 'mmap' }) -Force
 $cfg | Add-Member -NotePropertyName residentBudgetGiB -NotePropertyValue ([int]$ResidentBudgetGiB) -Force
 Write-B65Json -Path $configPath -Value $cfg
 
