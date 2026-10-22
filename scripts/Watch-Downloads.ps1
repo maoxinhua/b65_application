@@ -4,6 +4,7 @@ param(
     [int]$IntervalSec = 5,
     [switch]$Once,
     [switch]$NoClear,
+    [switch]$Active,
     [int]$MaxRows = 12
 )
 
@@ -26,15 +27,24 @@ function Get-DownloadFiles {
     foreach ($root in $roots) {
         if (-not (Test-Path -LiteralPath $root)) { continue }
         $items += Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Extension -in @('.part', '.safetensors', '.gguf') } |
+            Where-Object {
+                if ($Active) {
+                    $_.Extension -eq '.part' -and $_.LastWriteTime -gt (Get-Date).AddMinutes(-10)
+                } else {
+                    $_.Extension -in @('.part', '.safetensors', '.gguf')
+                }
+            } |
             ForEach-Object { $_.Refresh(); $_ }
     }
     return @($items | Sort-Object LastWriteTime -Descending | Select-Object -First $MaxRows)
 }
 
 function Get-LogTail {
-    $log = Join-Path (Get-B65Path 'runtime\logs') 'download-video-console.log'
-    if (-not (Test-Path -LiteralPath $log)) { return @() }
+    $logDir = Get-B65Path 'runtime\logs'
+    $log = Get-ChildItem -LiteralPath $logDir -Filter 'download-*.log' -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $log) { return @() }
+    $log = $log.FullName
     $lines = Get-Content -LiteralPath $log -Tail 4 -ErrorAction SilentlyContinue
     return @($lines | ForEach-Object { ($_ -replace "`r", ' ').Trim() } | Where-Object { $_ } | Select-Object -Last 2)
 }
@@ -55,7 +65,21 @@ while ($true) {
 
         $eta = ''
         $base = $key -replace '\.part$', ''
-        if ($expected.ContainsKey($base) -and $speed -gt 0.1) {
+        $totalGB = 0
+        foreach ($llmName in @('IQ3_XXS', 'IQ3_S', 'IQ2_XS')) {
+            if ($f.Name -match $llmName) {
+                $totalGB = switch ($llmName) { 'IQ3_XXS' { 76 } 'IQ3_S' { 84 } 'IQ2_XS' { 68 } }
+                break
+            }
+        }
+        if ($totalGB -gt 0 -and $speed -gt 0.1) {
+            $dir = Split-Path -Parent $f.FullName
+            $doneGB = ((Get-ChildItem -LiteralPath $dir -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1GB)
+            $remain = $totalGB - $doneGB
+            if ($remain -gt 0) {
+                $eta = [timespan]::FromSeconds(($remain * 1024) / $speed).ToString('hh\:mm')
+            }
+        } elseif ($expected.ContainsKey($base) -and $speed -gt 0.1) {
             $remain = $expected[$base] - $sizeGB
             if ($remain -gt 0) {
                 $eta = [timespan]::FromSeconds(($remain * 1024) / $speed).ToString('hh\:mm')
@@ -80,7 +104,8 @@ while ($true) {
 
     if (-not $NoClear) { Clear-Host }
     Write-Host ''
-    Write-Host ('B65 downloads   {0}   free {1} GB on {2}:' -f $now.ToString('HH:mm:ss'), $freeGB, $driveLetter) -ForegroundColor Cyan
+    $title = if ($Active) { 'B65 active downloads' } else { 'B65 downloads' }
+    Write-Host ('{0}   {1}   free {2} GB on {3}:' -f $title, $now.ToString('HH:mm:ss'), $freeGB, $driveLetter) -ForegroundColor Cyan
     if ($procs.Count -gt 0) {
         Write-Host ('Processes: ' + (($procs | ForEach-Object { "$($_.Name)($($_.ProcessId))" }) -join ', '))
     } else {

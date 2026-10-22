@@ -65,6 +65,12 @@ Windows 自带的 WMI 和性能计数器**不暴露** Arc 温度，`Get-Counter`
 .\b65.ps1 downloads
 ```
 
+只看正在下载的文件（推荐，自动带速度/ETA）：
+
+```powershell
+.\b65.ps1 downloads -Active
+```
+
 只看一次快照：
 
 ```powershell

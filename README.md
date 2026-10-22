@@ -105,7 +105,7 @@ See [docs/00-panel.md](docs/00-panel.md).
 | `install llm\|video\|all` | unpack XeStrata / ComfyUI XPU |
 | `models -Profile draft\|final` | download model weights (`-Endpoint` to override the mirror) |
 | `download-all` | resumable queue: video draft → video final → LLM IQ3_XXS → IQ3_S |
-| `downloads` | live download speed / ETA / process panel (`-Once` for a snapshot) |
+| `downloads` | live download panel; `-Active` shows only in-progress files with speed/ETA |
 | `llm start\|stop\|restart\|status` | LLM lifecycle |
 | `video start\|stop\|restart\|status` | ComfyUI lifecycle |
 | `mode llm\|video\|idle` | exclusive switch (stops the other engine) |
