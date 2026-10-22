@@ -11,7 +11,8 @@ Both engines share one GPU, so the workbench enforces an **exclusive mode**: sta
 
 ![B65 Workbench dashboard](docs/dashboard.png)
 
-> Design notes, measurements and licensing: [B65_本地AI落地方案.md](B65_本地AI落地方案.md) (Chinese).
+> **Current architecture:** [docs/09-architecture.md](docs/09-architecture.md)  
+> Design notes, measurements and licensing: [B65_本地AI落地方案.md](B65_本地AI落地方案.md) (Chinese, v2.1 historical + v3 summary).
 
 ---
 
@@ -26,8 +27,11 @@ Open the folder in VS Code, then run the tasks (`Terminal -> Run Task`) or use a
 .\b65.ps1 install llm -Model IQ3_S   -RunSetup -NoStart               # 84 GB, optional max quality
 .\b65.ps1 install video         # ComfyUI Intel XPU portable pack
 
-.\b65.ps1 llm start             # waits for the engine, prints actual LAN URL + API key
+.\b65.ps1 llm start             # starts IQ3_XXS on the stable 8095 port
+.\b65.ps1 llm endpoint          # baseURL / model / apiKey / context / options
+.\b65.ps1 test-llm -Runs 1      # health + math + Chinese + JSON checks
 .\b65.ps1 status                # RAM / VRAM / processes
+.\b65.ps1 panel                 # native WinForms control panel
 .\b65.ps1 dashboard             # http://127.0.0.1:8099
 
 .\b65.ps1 models -Profile draft # Wan2.2 5B + text encoder + VAE (~18 GB)
@@ -61,23 +65,25 @@ Open the folder in VS Code, then run the tasks (`Terminal -> Run Task`) or use a
 | OS | Windows 11 (Windows PowerShell 5.1 is enough) |
 | GPU | Intel Arc Pro B65 32 GB, driver **32.0.101.8976** or newer |
 | CPU | i9-13900 class (AVX2; AVX-512 not required) |
-| RAM | 64 GB (IQ3_XXS ~60 GB recommended; IQ3_S ~62 GB is tight) |
+| RAM | 64 GB (IQ3_XXS `mmap` leaves ~20 GB free; IQ3_S is tight) |
 | BIOS | Above 4G Decoding + Re-Size BAR on, CSM off |
 | Runtime | .NET 10 Desktop Runtime, VC++ x64 Redistributable |
-| Disk | ~120 GB for LLM + ~80 GB for video models |
+| Disk | ~280 GB for all three LLM profiles + video models |
 
-No WSL2: XeStrata's Linux/Arc path does not work reliably under WSL, and ComfyUI should run natively for full VRAM.
+The engines run **natively on Windows**; WSL2 is optional and independent. Shutting it down frees ~6–8 GB for the LLM, but is not required (see [docs/08](docs/08-llm-testing-optimization.md)).
 
 The UHD 770 is deliberately left as a **display/QSV-only** device; see [docs/07-igpu.md](docs/07-igpu.md).
 
 ## How it works
 
 ```
-b65.ps1 ── scripts\B65.psm1 (state, metrics, process control)
-   ├─ Llm.ps1 / Video.ps1 ── exclusive start-stop
+b65.ps1 ── scripts\B65.psm1 (config, state, metrics, process control)
+   ├─ Llm.ps1 / Use-LlmModel.ps1 ── model profiles, context/lowRam/kv, start-stop
+   ├─ Video.ps1 / Invoke-Render.ps1 ── ComfyUI lifecycle + /prompt + /history
    ├─ Watch-Resources.ps1 ── RAM/VRAM sampler + safety stop
+   ├─ Test-Llm.ps1 ── health / quality / token-rate checks
+   ├─ Start-Panel.ps1 + app\B65Panel.ps1 ── native WinForms control panel
    ├─ Start-Dashboard.ps1 ── local web console (:8099)
-   ├─ Invoke-Render.ps1 ── ComfyUI /prompt + /history
    ├─ New-SpecCard.ps1 ── HTML → Edge headless PNG
    └─ Build-Video.ps1 ── FFmpeg normalize / concat / audio
 ```
@@ -100,7 +106,7 @@ See [docs/00-panel.md](docs/00-panel.md).
 ### LLM testing and tuning
 
 - [IQ3 testing and Windows optimization](docs/08-llm-testing-optimization.md)
-- Run ` .\b65.ps1 test-llm -Runs 3` for health/model/math/Chinese/JSON checks.
+- Run `.\b65.ps1 test-llm -Runs 3` for health/model/math/Chinese/JSON checks.
 
 ## Commands
 
@@ -132,7 +138,7 @@ See [docs/00-panel.md](docs/00-panel.md).
 
 | Mode | VRAM | RAM | Guard |
 |---|---|---|---|
-| LLM (IQ3_XXS, 32K) | ~28 GB | ~60 GB | warn < 8 GB free, stop < 4 GB free × 6 samples |
+| LLM (IQ3_XXS, 32K, mmap) | ~33 GB (incl. shared) | ~40–60 GB | warn < 8 GB free, stop < 4 GB free × 6 samples |
 | Video (Wan2.2 final) | ~26 GB | ~20 GB | watchdog records VRAM; OOM handled by ComfyUI |
 | Idle | ~2 GB (desktop) | — | — |
 
@@ -144,16 +150,34 @@ Thresholds are in `config\settings.json` (`watchdog`). The watchdog starts with 
 apps\            XeStrata, ComfyUI (downloaded, gitignored)
 models\          LLM + ComfyUI weights (gitignored)
 tools\           7-Zip, FFmpeg (gitignored)
-config\          settings, profiles, model manifest, card data
+config\          settings, LLM profiles, model manifest, DSH route template, card data
 workflows\       ComfyUI API-format workflows
 dashboard\       local web console
+app\             WinForms control panel
 scripts\         PowerShell control plane
 projects\        per-video manifests and cards
 assets\          brand, product stills, card template
-output\          renders (gitignored)
-docs\            installation / operations / troubleshooting
+output\          renders + llm-tests (gitignored)
+docs\            architecture (09) / installation / operations / testing
 runtime\         state, logs, metrics (gitignored)
 ```
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [RUN.md](RUN.md) | VS Code / F5 / task quick start |
+| [docs/00-panel.md](docs/00-panel.md) | WinForms control panel |
+| [docs/01-install.md](docs/01-install.md) | install, drivers, first run |
+| [docs/02-llm.md](docs/02-llm.md) | LLM profiles, API, ports |
+| [docs/03-video.md](docs/03-video.md) | ComfyUI / Wan2.2 pipeline |
+| [docs/04-operations.md](docs/04-operations.md) | monitoring, downloads, logs |
+| [docs/05-troubleshooting.md](docs/05-troubleshooting.md) | common failures |
+| [docs/06-local-ai-implementation.md](docs/06-local-ai-implementation.md) | current implementation notes |
+| [docs/07-igpu.md](docs/07-igpu.md) | UHD 770 / QSV roles |
+| [docs/08-llm-testing-optimization.md](docs/08-llm-testing-optimization.md) | IQ3 testing, WSL, tuning |
+| [docs/09-architecture.md](docs/09-architecture.md) | **current architecture** |
+| [B65_本地AI落地方案.md](B65_本地AI落地方案.md) | v2.1 design history + v3 summary |
 
 ## Licensing
 

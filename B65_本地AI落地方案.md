@@ -1,4 +1,4 @@
-# B65（32 GB）本地 AI 落地方案 v2.1：Strata 路线 + 产品广告文生视频
+# B65（32 GB）本地 AI 落地方案 v2.1（历史设计）+ v3 当前实现摘要
 
 > 适用环境：Windows 11 专业版宿主机（**不能装 Linux**）+ WSL2；Intel Arc Pro B65 32 GB；DDR5 64 GB（WSL2 限额 40 GB）。
 > 本文只做**选型、评估与实施清单**，不执行任何安装。
@@ -8,7 +8,32 @@
 
 ---
 
-## 0. 一页结论（v2）
+
+---
+
+> ## v3 当前实现（2026-10-22）
+>
+> 本文 v2.1 是**选型/估算记录**；实际落地已经升级，以下数字以当前仓库为准：
+>
+> | 项目 | v3 实际 |
+> |---|---|
+> | 默认 LLM | **IQ3_XXS**（70.6 GB，`lowRam=mmap`） |
+> | 可选 | IQ3_S（77.9 GB，内存很紧）、IQ2_XS（63.4 GB，快速回退） |
+> | 上下文 | 默认 **32768**；原生最大 **262144**；32K 已用 31,068 token 验证 |
+> | 速度（32K） | decode 30–55 tok/s，prefill 约 1,250–1,300 tok/s |
+> | 端口 | **稳定 8095**（`noWarmup=true`），DSH baseURL 不再漂移 |
+> | 控制面 | `b65.ps1` + WinForms 面板 `app\B65Panel.ps1` + Web dashboard |
+> | 测试 | `scripts\Test-Llm.ps1`，输出 `output\llm-tests` |
+> | WSL2 | 可选，不影响 Windows 引擎；关掉可多 6–8 GB |
+>
+> **当前架构见 [docs/09-architecture.md](docs/09-architecture.md)**；测试与调优见
+> [docs/08-llm-testing-optimization.md](docs/08-llm-testing-optimization.md)。
+> 下面的 v2.1 内容保留为历史评估，IQ2_XS/48 GB/45–60 tok/s 等旧数字不再代表现状。
+>
+> ---
+
+
+## 0. 一页结论（v2 历史，已被 v3 取代）
 
 | 目标 | 推荐 | 一句话理由 | 预期表现（B65） |
 |---|---|---|---|
