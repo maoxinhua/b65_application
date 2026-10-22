@@ -112,9 +112,10 @@ xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
 ### 3.4 上下文
 
 - 模型原生最大：**262,144（256K）**；
-- 默认：**32,768（32K）**；
+- 默认：**32,768（32K）**；当前机器曾切到 **131,072（128K）** 并验证；
 - 已验证：32K 下 **31,068 token** 的真实输入，prefill 1,291 tok/s，答案正确；
-- 40K / 48K / 64K / 96K / 128K / 256K 都能加载，但只做了短请求测试，未填满；
+- 128K 已用 **110,068 token** 输入验证：prefill 439.5 tok/s，4m13s，答案正确；
+- 40K / 48K / 64K / 96K / 256K 都能加载，但只做了短请求测试，未填满；
 - 日常建议 32K 或 64K，256K 仅适合偶尔的超长输入。
 
 ### 3.5 API
@@ -218,7 +219,7 @@ qwen38-flash-next:
   models:
     - id: qwen3.8-flash-next-iq3_xxs
       name: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
-      contextWindow: 32768
+      contextWindow: 131072
       maxTokens: 8192
       input: [text]
 ```
@@ -238,6 +239,7 @@ qwen38-flash-next:
 | idle | ~2–3 GB | 40+ GB | 桌面 |
 | IQ3_XXS 32K mmap | ~33 GB | 20–24 GB | 默认 |
 | IQ3_XXS 64K mmap | ~33.9 GB | ~22 GB | 长文档 |
+| IQ3_XXS 128K mmap | ~34.5 GB（31.5 + 3 shared） | ~20.5 GB | 110K token 已验证，prefill ~440 tok/s |
 | IQ3_XXS 256K | ~33 GB | ~27 GB | 仅加载验证 |
 | IQ3_S | ~33 GB | 更紧 | 需关大程序 |
 | ComfyUI final | ~26 GB | ~20 GB | 与 LLM 互斥 |

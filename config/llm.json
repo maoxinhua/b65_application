@@ -2,7 +2,7 @@
     "exe":  "apps/XeStrata/xestrata-cli.exe",
     "gui":  "apps/XeStrata/xestrata.exe",
     "model":  "IQ3_XXS",
-    "context":  32768,
+    "context":  131072,
     "vision":  false,
     "host":  "0.0.0.0",
     "port":  8095,

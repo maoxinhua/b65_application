@@ -4,7 +4,7 @@
 
 Windows + VS Code control plane for one **Intel Arc Pro B65 32 GB**:
 
-1. **LLM** — `Qwen3.8-Flash-Next IQ3_XXS @ 32K` on **XeStrata** (Strata for Intel GPUs), with selectable IQ2_XS / IQ3_S, start/stop, RAM guard, LAN OpenAI-compatible API and token.
+1. **LLM** — `Qwen3.8-Flash-Next IQ3_XXS` on **XeStrata** (context 32K/64K/128K/256K) (Strata for Intel GPUs), with selectable IQ2_XS / IQ3_S, start/stop, RAM guard, LAN OpenAI-compatible API and token.
 2. **Video** — ComfyUI Intel XPU + Wan2.2 (5B draft / 14B final + 1080p finishing), plus HTML spec cards and an FFmpeg assembler for **IoT module training / promotion videos without human footage**.
 
 Both engines share one GPU, so the workbench enforces an **exclusive mode**: starting one stops the other.

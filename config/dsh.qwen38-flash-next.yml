@@ -10,7 +10,7 @@ qwen38-flash-next:
   models:
     - id: qwen3.8-flash-next-iq3_xxs
       name: 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
-      contextWindow: 32768
+      contextWindow: 131072
       maxTokens: 8192
       input:
         - text
