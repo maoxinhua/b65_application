@@ -5,6 +5,9 @@
 > `curl http://127.0.0.1:<port>/health` 的实际结果为准；API Key 也必须带
 > `Authorization: Bearer <key>`，否则 401。
 
+> API 的 `model` 字段是 **`qwen3.8-flash-next-iq2_xs`**，不是 `IQ2_XS`，也不是 `qwen3.8-flash-next`。
+> 用 `curl http://127.0.0.1:<实际端口>/v1/models` 可以确认。
+
 ## 为什么是 IQ2_XS + 32K
 
 | 项 | 选择 | 原因 |
@@ -88,7 +91,7 @@ API Key     : 见 llm start / status 输出
 ```powershell
 $key = "你的key"
 $body = @{
-  model = "qwen3.8-flash-next"
+  model = "qwen3.8-flash-next-iq2_xs"
   messages = @(@{ role = "user"; content = "用三句话介绍 5G 模组" })
 } | ConvertTo-Json -Depth 5
 
