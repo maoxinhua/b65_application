@@ -21,7 +21,7 @@ cd E:\dsh_project\B65_graphic
 
 | 页面 | 功能 |
 |---|---|
-| **LLM** | 加载/启动、卸载/停止、重启、打开 API、复制 LAN Base URL / Key；显示模型、上下文、PID、RSS、显存 |
+| **LLM** | 加载/启动、卸载/停止、重启、打开 API、复制 LAN Base URL / Key；显示模型、上下文、PID、RSS、显存；底部可选 **IQ3_XXS / IQ3_S / IQ2_XS** 并下载/切换 |
 | **视频** | 启动/停止 ComfyUI、打开 ComfyUI、快速渲染 draft/final、取消当前、最近输出列表（双击打开） |
 | **广告工作流** | 产品图 + 描述 → draft 小样 → **暂停等你检查** → final 14B → 合成 1080p 广告 |
 | **日志** | 选择 `runtime\logs\*.log`，自动刷新，打开日志目录 |

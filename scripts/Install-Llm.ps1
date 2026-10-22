@@ -7,7 +7,9 @@ param(
     [switch]$Interact,
     [switch]$CheckUpdate,
     [switch]$RunSetup,
-    [string]$Model = 'IQ2_XS',
+    [switch]$NoStart,
+    [switch]$SetDefault,
+    [string]$Model = '',
     [int]$Context = 32768,
     [string]$Source = 'modelscope',
     [string]$ModelsDir = '',
@@ -16,6 +18,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'B65.psm1') -Force
+
+if (-not $Model) { $Model = [string](Get-B65Config -Name llm).model }
 
 $assetVersion = $Version -replace '^xe', ''
 $asset = "XeStrata-$assetVersion-windows-x64.7z"
@@ -130,7 +134,7 @@ if (-not $RunSetup) {
         Write-Host '       .\b65.ps1 install llm -RunSetup'
         Write-Host '     or run apps\XeStrata\xestrata.exe once and choose:'
         Write-Host '       GPU: Intel Arc Pro B65 / bmg-g31'
-        Write-Host '       Model: IQ2_XS (64 GB RAM is the limiting factor)'
+        Write-Host '       Model: IQ3_XXS (recommended; IQ2_XS is the fast fallback)'
         Write-Host '       Context: 32768'
         Write-Host '       Images: off for now'
         Write-Host '  3. Then run: .\b65.ps1 llm start'
@@ -149,7 +153,7 @@ if ($RunSetup) {
     Write-Host "Starting XeStrata setup: model=$Model context=$Context source=$Source" -ForegroundColor Yellow
     Write-Host "Models: $modelsFull"
     Write-Host "Data:   $dataFull"
-    Write-Host "This downloads roughly 68 GB and prepares the engine; it can be resumed."
+    Write-Host "This downloads the selected model and prepares the engine; it can be resumed."
     $setupArgs = @(
         '--setup', '--family', 'qwen',
         '--model', $Model,
@@ -160,6 +164,7 @@ if ($RunSetup) {
         '--data-dir', $dataFull,
         '--no-browser'
     )
+    if ($NoStart) { $setupArgs += '--no-start' }
     if (-not $Interact) { $setupArgs += '--yes' }
     $oldErrorPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -173,4 +178,7 @@ if ($RunSetup) {
         throw "XeStrata model setup failed with exit code $setupExitCode. Keep the existing engine and models; rerun the same command to resume."
     }
     Remove-Item Env:B65_INSTALL_CHILD -ErrorAction SilentlyContinue
+    if ($SetDefault) {
+        & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') -Model $Model
+    }
 }

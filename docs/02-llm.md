@@ -5,20 +5,29 @@
 > `curl http://127.0.0.1:<port>/health` 的实际结果为准；API Key 也必须带
 > `Authorization: Bearer <key>`，否则 401。
 
-> API 的 `model` 字段是 **`qwen3.8-flash-next-iq2_xs`**，不是 `IQ2_XS`，也不是 `qwen3.8-flash-next`。
-> 用 `curl http://127.0.0.1:<实际端口>/v1/models` 可以确认。
+> API 的 `model` 字段随档位变化，例如 `qwen3.8-flash-next-iq3_xxs`、`qwen3.8-flash-next-iq3_s`、
+> `qwen3.8-flash-next-iq2_xs`。用 `curl http://127.0.0.1:<实际端口>/v1/models` 确认，不要写死。
 
-## 为什么是 IQ2_XS + 32K
+## 模型档位
 
-| 项 | 选择 | 原因 |
-|---|---|---|
-| 模型 | Qwen3.8-Flash-Next IQ2_XS | 125B-A6B，48 GB 内存可全驻留；IQ3_S 要 62 GB，64 GB Windows 会 paging |
-| 上下文 | 32768 | KV 不挤占专家缓存；稳定后再试 64K/128K |
-| 引擎 | XeStrata | 官方 Strata 没有 Windows 版 Intel 引擎 |
-| 后端 | Level Zero / SYCL，AOT `bmg-g31` | B65 与 B70 同核心 |
+| 档位 | 下载 | 内存 | 质量 / 用途 |
+|---|---:|---:|---|
+| **IQ3_XXS** | 76 GB | ~60 GB | 默认；64 GB 机器的最佳平衡 |
+| **IQ3_S** | 84 GB | ~62 GB | 最高质量；关闭其他程序再跑 |
+| **IQ2_XS** | 68 GB | ~48 GB | 快速回退 |
 
-预期（DDR5-4000，估算）：**decode 45–60 tok/s，prefill 1,200–1,600 tok/s**。
-实际以 `--bench` 为准。
+XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运行时的估算略低
+（~43 / ~50 GB），但 Windows 自身还要占内存，**默认选 IQ3_XXS**，IQ3_S 只在高可用内存时用。
+
+```powershell
+# 下载（--no-start 不会在下载后抢占显存）
+.\b65.ps1 install llm -Model IQ3_XXS -RunSetup -NoStart -SetDefault
+.\b65.ps1 install llm -Model IQ3_S   -RunSetup -NoStart
+
+# 只改配置 / 改配置并重启
+.\b65.ps1 llm use    -Model IQ3_XXS
+.\b65.ps1 llm switch -Model IQ3_XXS
+```
 
 ## 配置
 
@@ -26,7 +35,7 @@
 
 ```json
 {
-  "model": "IQ2_XS",
+  "model": "IQ3_XXS",
   "context": 32768,
   "vision": false,
   "host": "0.0.0.0",
@@ -36,29 +45,31 @@
   "source": "modelscope",
   "dataDir": "runtime/xestrata",
   "modelsDir": "models/llm",
+  "residentBudgetGiB": 0,
+  "lowRam": "auto",
   "optionalArgs": true
 }
 ```
 
-- `dataDir` / `modelsDir` 让模型和配置落在工作路径下（约 68 GB）；留空则用 `%LOCALAPPDATA%\xestrata`。
+- `dataDir` / `modelsDir` 让模型和配置落在工作路径下；每个档位在 `models\llm\<档位>`。
 - `source = modelscope` 国内下载更快；可改 `huggingface` 或 `auto`。
 - `vramReserveMiB = 1024` 给 WDDM 桌面/浏览器留余量。
 - `vision = false` → 传 `--vision no`；要读图再改 true。
 - `optionalArgs = false` 可在引擎不认 `--vram-reserve-mib` 时退回最小参数集。
-- XeStrata **没有** `--memory-limit-mib`；`--resident-budget-gib` 只适用于 UD-IQ4_XS / UD-Q4_K_XL 等预算型量化，对 IQ2_XS 不生效。IQ2_XS 本身就要 48 GB，限太多会拖慢。
+- `residentBudgetGiB = 0` 表示交给引擎自动；只有确认 `--resident-budget-gib` 对该量化有效时才设。
+- `lowRam = auto` 是引擎默认；需要强制 `on/off/resident/mmap` 时改这里。
 
-`xestrata-cli.exe --check` 在本机的输出（实测）：
+## 性能预期
 
-```
-GPU 0: Intel(R) Arc(TM) Pro B65 Graphics, 31 GB VRAM
-RAM: 64 GB
-CPU: 13th Gen Intel(R) Core(TM) i9-13900 (AVX2)
-Q2_0 / IQ2_XS -> 48 GB: fits
-IQ3_XXS -> 60 GB: fits
-IQ3_S -> 62 GB: fits
-```
+DDR5-4000、32K 上下文下的粗略估计（以 `xestrata-cli --bench` 实测为准）：
 
-工具会推荐 IQ3_XXS（60 GB），但 Windows 自身要占 4–6 GB，**IQ2_XS 才是 64 GB 机器的稳档**。
+| 档位 | decode | 备注 |
+|---|---:|---|
+| IQ2_XS | 45–60 tok/s | 当前基线 |
+| IQ3_XXS | 30–45 tok/s | 默认；质量/速度平衡 |
+| IQ3_S | 25–40 tok/s | 最高质量；内存紧张时更慢 |
+
+3-bit/3.5-bit 的 CPU 专家计算量更大，decode 会比 IQ2_XS 低；prefill 差异较小。
 
 ## 启停
 

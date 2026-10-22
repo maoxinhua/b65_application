@@ -60,13 +60,27 @@ VS Code 会提示安装推荐扩展，至少安装 **PowerShell**（`ms-vscode.P
 .\b65.ps1 models -Profile final
 
 # LLM 权重（约 68 GB，耗时最长，可最后做）
-.\b65.ps1 install llm -RunSetup
+.\b65.ps1 install llm -Model IQ3_XXS -RunSetup -NoStart -SetDefault
+.\b65.ps1 install llm -Model IQ3_S   -RunSetup -NoStart
 ```
 
 下载进度：
 
 ```powershell
 .\b65.ps1 downloads
+```
+
+## 选择 LLM 档位
+
+| 档位 | 下载 | 内存 | 说明 |
+|---|---:|---:|---|
+| IQ3_XXS | 76 GB | ~60 GB | 默认推荐 |
+| IQ3_S | 84 GB | ~62 GB | 最高质量，64 GB 很紧 |
+| IQ2_XS | 68 GB | ~48 GB | 快速回退 |
+
+```powershell
+.\b65.ps1 llm use    -Model IQ3_XXS   # 只改配置
+.\b65.ps1 llm switch -Model IQ3_XXS   # 改配置并重启
 ```
 
 ## 4. 面板里做什么

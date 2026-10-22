@@ -103,7 +103,7 @@ function Show-Help {
     Write-Host '  models -Profile draft|final download video model weights'
     Write-Host '  download-all                resumable queue: draft -> final -> LLM'
     Write-Host '  downloads                   live download speed / ETA panel'
-    Write-Host '  llm start|stop|restart|status'
+    Write-Host '  llm start|stop|restart|status|use|switch|list'
     Write-Host '  video start|stop|restart|status'
     Write-Host '  mode llm|video|idle         exclusive GPU mode switch'
     Write-Host '  status [-Json]              RAM/VRAM/process snapshot'

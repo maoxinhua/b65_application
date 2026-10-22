@@ -278,6 +278,26 @@ function Cancel-Render {
     }
 }
 
+function Get-ModelKey([string]$Name) {
+    if ($Name -match 'iq3_s') { return 'IQ3_S' }
+    if ($Name -match 'iq3_xxs') { return 'IQ3_XXS' }
+    return 'IQ2_XS'
+}
+
+function Update-ModelInfo {
+    if (-not $script:ModelCombo) { return }
+    $m = [string]$script:ModelCombo.SelectedItem
+    if (-not $m) { return }
+    $cfg = Get-B65Config -Name llm
+    $p = if ($cfg.modelCatalog) { $cfg.modelCatalog.$m } else { $null }
+    if ($p) {
+        $size = if ($p.sizeGB) { [string]$p.sizeGB } else { '?' }
+        $script:ModelInfo.Text = ('{0}  |  ~{1} GB RAM  |  {2} GB download  |  {3}' -f $p.label, $p.ramGB, $size, $p.note)
+    } else {
+        $script:ModelInfo.Text = $m
+    }
+}
+
 function Update-Status {
     try {
         $st = Get-B65Status
@@ -285,8 +305,17 @@ function Update-Status {
         return
     }
     $script:ValMode.Text = ([string]$st.mode).ToUpper()
-    $script:ValLlm.Text = if ($st.llm.running) { 'RUNNING :' + $st.llm.port } else { 'stopped' }
-    $script:ValLlm.ForeColor = if ($st.llm.running) { $script:Green } else { $script:Muted }
+    $script:LastSetup = $st.llm.setup
+    if ($st.llm.setup) {
+        $script:ValLlm.Text = 'SETUP ' + $st.llm.setup.model
+        $script:ValLlm.ForeColor = $script:Yellow
+    } elseif ($st.llm.running) {
+        $script:ValLlm.Text = 'RUNNING :' + $st.llm.port
+        $script:ValLlm.ForeColor = $script:Green
+    } else {
+        $script:ValLlm.Text = 'stopped'
+        $script:ValLlm.ForeColor = $script:Muted
+    }
     $script:ValVideo.Text = if ($st.video.running) { 'RUNNING :' + $st.video.port } else { 'stopped' }
     $script:ValVideo.ForeColor = if ($st.video.running) { $script:Green } else { $script:Muted }
     $script:ValRam.Text = ('{0} / {1} GB' -f $st.memory.FreeGB, $st.memory.TotalGB)
@@ -298,6 +327,11 @@ function Update-Status {
     $llmCfg = Get-B65Config -Name llm
     $script:LlmModel.Text = if ($st.llm.model) { [string]$st.llm.model } else { [string]$llmCfg.model }
     $script:LlmCtx.Text = if ($st.llm.context) { [string]$st.llm.context } else { [string]$llmCfg.context }
+    if ($script:ModelCombo -and -not $script:ModelCombo.Focused) {
+        $currentModel = if ($st.llm.running -and $st.llm.model) { [string]$st.llm.model } else { [string]$llmCfg.model }
+        $key = Get-ModelKey $currentModel
+        if ([string]$script:ModelCombo.SelectedItem -ne $key) { $script:ModelCombo.SelectedItem = $key }
+    }
     $script:LlmRss.Text = if ($st.llm.stats -and $st.llm.stats.rssMB) { ('{0} MB' -f $st.llm.stats.rssMB) } else { '-' }
     $script:LlmVram.Text = ('{0} MB' -f $st.llm.vramMB)
     $script:VideoPid.Text = [string]$st.video.pid
@@ -525,6 +559,33 @@ $api.Controls.Add((New-Btn -Text '复制 API Key' -X 162 -Y 104 -W 140 -H 32 -Co
 }))
 $api.Controls.Add((New-Lbl -Text '提示：加载 LLM 前会先停掉 ComfyUI，32 GB 显存一次只跑一项。' -X 14 -Y 148 -W 540 -H 30 -Size 8.5 -Color $script:Muted))
 $llm.Controls.Add($api)
+$modelCard = New-Card -X 12 -Y 456 -W 580 -H 140 -Title '模型档位'
+$modelCard.Controls.Add((New-Lbl -Text '模型' -X 14 -Y 40 -W 50 -H 20 -Color $script:Muted))
+$script:ModelCombo = New-Object System.Windows.Forms.ComboBox
+$script:ModelCombo.Location = New-Object System.Drawing.Point(64, 36)
+$script:ModelCombo.Size = New-Object System.Drawing.Size(180, 24)
+$script:ModelCombo.DropDownStyle = 'DropDownList'
+$script:ModelCombo.BackColor = C '#0b1220'
+$script:ModelCombo.ForeColor = $script:Text
+[void]$script:ModelCombo.Items.AddRange(@('IQ3_XXS', 'IQ3_S', 'IQ2_XS'))
+$script:ModelCombo.SelectedItem = 'IQ2_XS'
+$script:ModelCombo.Add_SelectedIndexChanged({ Update-ModelInfo })
+$modelCard.Controls.Add($script:ModelCombo)
+$script:ModelInfo = New-Lbl -Text '' -X 14 -Y 66 -W 540 -H 30 -Size 8.5 -Color $script:Muted
+$modelCard.Controls.Add($script:ModelInfo)
+$modelCard.Controls.Add((New-Btn -Text '应用并重启' -X 14 -Y 100 -W 130 -H 30 -Color $script:Green -OnClick {
+    $m = [string]$script:ModelCombo.SelectedItem
+    Start-Action -Label ("切换到 $m") -ActionArgs @('llm', 'switch', '-Model', $m)
+}))
+$modelCard.Controls.Add((New-Btn -Text '下载 / 更新' -X 152 -Y 100 -W 120 -H 30 -Color $script:Accent -OnClick {
+    if ($script:LastSetup) { Add-Log "已有模型下载/准备任务在运行：$($script:LastSetup.model)"; return }
+    $m = [string]$script:ModelCombo.SelectedItem
+    Start-Action -Label ("下载 $m") -ActionArgs @('install', 'llm', '-Model', $m, '-RunSetup', '-NoStart', '-SetDefault')
+}))
+$modelCard.Controls.Add((New-Btn -Text '刷新档位' -X 280 -Y 100 -W 100 -H 30 -Color (C '#334155') -OnClick { Update-ModelInfo }))
+$llm.Controls.Add($modelCard)
+Update-ModelInfo
+
 
 $help = New-Card -X 606 -Y 12 -W 580 -H 434 -Title '工作方式'
 $helpText = @"

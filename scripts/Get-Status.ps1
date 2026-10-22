@@ -24,6 +24,9 @@ Write-Host ("LLM         : {0}  pid={1}  port={2}  model={3}  ctx={4}" -f `
 if ($s.llm.running) {
     Write-Host ("              RSS {0} MB, GPU {1} MB, CPU {2}s" -f $s.llm.stats.WorkingSetMB, $s.llm.vramMB, $s.llm.stats.CpuSec)
 }
+if ($s.llm.setup) {
+    Write-Host ("              SETUP {0}  pid={1}" -f $s.llm.setup.model, $s.llm.setup.pid) -ForegroundColor Yellow
+}
 Write-Host ("Video       : {0}  pid={1}  port={2}" -f `
     $(if ($s.video.running) { 'RUNNING' } else { 'stopped' }), $s.video.pid, $s.video.port)
 if ($s.video.running) {

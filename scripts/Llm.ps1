@@ -1,7 +1,8 @@
 # Llm.ps1 - start, stop, restart and inspect the local Qwen3.8-Flash-Next engine.
 [CmdletBinding()]
 param(
-    [ValidateSet('start', 'stop', 'restart', 'status')][string]$Action = 'status',
+    [ValidateSet('start', 'stop', 'restart', 'status', 'use', 'switch', 'list')][string]$Action = 'status',
+    [string]$Model = '',
     [switch]$OpenFirewall,
     [switch]$NoWatchdog
 )
@@ -48,6 +49,10 @@ function Stop-LlmInternal {
 
 function Start-LlmInternal {
     $state = Get-B65State
+    $setup = Get-B65LlmSetup
+    if ($setup) {
+        throw "A model setup/download is running (PID $($setup.pid), $($setup.model)). Wait for it to finish, or stop it before starting the LLM."
+    }
     $live = Get-B65LlmLive
     if ($live -and $live.running) {
         $state.llm.pid = [int]$live.pid
@@ -110,6 +115,12 @@ function Start-LlmInternal {
     if ([int]$llm.parallel -gt 1) { $startArgs += @('--parallel', [string]$llm.parallel) }
     if ($llm.optionalArgs) {
         $startArgs += @('--vram-reserve-mib', [string]$llm.vramReserveMiB)
+    }
+    if ($llm.residentBudgetGiB -and [int]$llm.residentBudgetGiB -gt 0) {
+        $startArgs += @('--resident-budget-gib', [string]$llm.residentBudgetGiB)
+    }
+    if ($llm.lowRam -and [string]$llm.lowRam -ne 'auto') {
+        $startArgs += @('--low-ram', [string]$llm.lowRam)
     }
     foreach ($extra in @($llm.extraArgs)) {
         if ($null -ne $extra -and "$extra" -ne '') { $startArgs += [string]$extra }
@@ -187,8 +198,39 @@ function Start-LlmInternal {
     Write-Host ''
 }
 
+function Show-LlmModels {
+    $cfg = Get-B65Config -Name llm
+    $modelsDir = Resolve-B65Path -Path ([string]$cfg.modelsDir)
+    $rows = foreach ($key in @('IQ2_XS', 'IQ3_XXS', 'IQ3_S')) {
+        $profile = if ($cfg.modelCatalog) { $cfg.modelCatalog.$key } else { $null }
+        $dir = Join-Path $modelsDir $key
+        $files = @(Get-ChildItem -LiteralPath $dir -Filter '*.gguf' -File -ErrorAction SilentlyContinue)
+        $sizeGB = if ($files.Count -gt 0) { [math]::Round((($files | Measure-Object Length -Sum).Sum / 1GB), 1) } else { 0 }
+        [pscustomobject]@{
+            Model     = $key
+            Installed = ($files.Count -gt 0)
+            SizeGB    = if ($sizeGB -gt 0) { $sizeGB } else { $profile.sizeGB }
+            RAMGB     = if ($profile) { $profile.ramGB } else { 0 }
+            Default   = ($cfg.model -eq $key)
+            Note      = if ($profile) { $profile.note } else { '' }
+        }
+    }
+    $rows | Format-Table Model, Installed, SizeGB, RAMGB, Default, Note -AutoSize
+}
+
+function Switch-LlmModel {
+    if (-not $Model) { throw 'Usage: .\b65.ps1 llm switch -Model IQ3_XXS' }
+    & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') -Model $Model
+    Stop-LlmInternal
+    Start-Sleep -Seconds 2
+    Start-LlmInternal
+}
+
 switch ($Action) {
     'start'   { Start-LlmInternal }
+    'use'     { if (-not $Model) { throw 'Usage: .\b65.ps1 llm use -Model IQ3_XXS' }; & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') -Model $Model }
+    'switch'  { Switch-LlmModel }
+    'list'    { Show-LlmModels }
     'stop'    { Stop-LlmInternal; Write-B65Log 'LLM stopped.' -Name 'llm' }
     'restart' { Stop-LlmInternal; Start-Sleep -Seconds 2; Start-LlmInternal }
     'status'  {

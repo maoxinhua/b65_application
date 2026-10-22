@@ -345,6 +345,16 @@ function Get-B65ProcessStats {
     }
 }
 
+function Get-B65LlmSetup {
+    $p = Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -eq 'xestrata-cli.exe' -and $_.CommandLine -match '--setup' } |
+        Select-Object -First 1
+    if (-not $p) { return $null }
+    $model = ''
+    if ($p.CommandLine -match '--model\s+("[^"]+"|\S+)') { $model = $Matches[1].Trim('"') }
+    return [pscustomobject]@{ running = $true; pid = [int]$p.ProcessId; model = $model }
+}
+
 function Get-B65LlmLive {
     # XeStrata's setup.py may hand server.py a different port than --port.
     # Detect the live engine from process command lines + /health instead of trusting state.json.
@@ -381,6 +391,7 @@ function Get-B65LlmLive {
 
     $candidates = @($port)
     if ($cli -and $cli.CommandLine -match '--port\s+(\d+)') { $candidates += [int]$Matches[1] }
+    try { $candidates += [int](Get-B65State).llm.port } catch { }
     $candidates += 8095
     $candidates = @($candidates | Where-Object { $_ -gt 0 } | Select-Object -Unique)
 
@@ -392,6 +403,8 @@ function Get-B65LlmLive {
             if ($h -and $h.status -eq 'ok') { $health = $h; $livePort = $p; break }
         } catch { }
     }
+    # A --setup/download process has no server.py and no /health; it is not a serving engine.
+    if (-not $health -and -not $srv) { return $null }
     if ($livePort -gt 0) { $port = $livePort }
     if ($health) {
         if ($health.model) { $model = [string]$health.model }
@@ -417,17 +430,19 @@ function Get-B65LlmLive {
 
 function Get-B65Status {
     $settings = Get-B65Config -Name settings
+    $llmCfg = Get-B65Config -Name llm
     $state = Get-B65State
     $mem = Get-B65Memory
     $gpu = Get-B65Gpu
 
     $live = Get-B65LlmLive
+    $setup = Get-B65LlmSetup
     $llmAlive = [bool]$live
     $videoAlive = Test-B65Pid -ProcessId ([int]$state.video.pid)
     $llmPid = if ($live) { [int]$live.pid } else { [int]$state.llm.pid }
     $llmPort = if ($live -and $live.port -gt 0) { [int]$live.port } else { [int]$state.llm.port }
-    $llmModel = if ($live -and $live.model) { [string]$live.model } else { $state.llm.model }
-    $llmCtx = if ($live -and $live.context -gt 0) { [int]$live.context } else { [int]$state.llm.context }
+    $llmModel = if ($live -and $live.model) { [string]$live.model } elseif ($llmAlive) { [string]$state.llm.model } else { [string]$llmCfg.model }
+    $llmCtx = if ($live -and $live.context -gt 0) { [int]$live.context } elseif ($llmAlive) { [int]$state.llm.context } else { [int]$llmCfg.context }
     $llmKey = if ($live -and $live.apiKey) { [string]$live.apiKey } else { $state.llm.apiKey }
     $llmVramPid = if ($live -and $live.strataPid -gt 0) { [int]$live.strataPid } elseif ($llmPid -gt 0) { $llmPid } else { 0 }
     $mode = if ($live) { 'llm' } else { $state.mode }
@@ -458,6 +473,7 @@ function Get-B65Status {
             startedAt = $state.llm.startedAt
             apiKey    = $llmKey
             apiKeyRequired = if ($live) { [bool]$live.apiKeyRequired } else { $false }
+            setup     = $setup
             stats     = (Get-B65ProcessStats -ProcessId $llmPid)
             vramMB    = (Get-B65ProcessVramMB -ProcessId $llmVramPid)
         }

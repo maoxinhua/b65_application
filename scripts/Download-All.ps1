@@ -17,7 +17,8 @@ if (-not $SkipFinal) {
     $queue.Add([pscustomobject]@{ Name = 'video-final'; Script = 'Download-Models.ps1'; Args = @{ Profile = 'final' } })
 }
 if (-not $SkipLlm) {
-    $queue.Add([pscustomobject]@{ Name = 'llm-iq2-xs'; Script = 'Install-Llm.ps1'; Args = @{ RunSetup = $true } })
+    $queue.Add([pscustomobject]@{ Name = 'llm-iq3-xxs'; Script = 'Install-Llm.ps1'; Args = @{ Model = 'IQ3_XXS'; RunSetup = $true; NoStart = $true; SetDefault = $true } })
+    $queue.Add([pscustomobject]@{ Name = 'llm-iq3-s'; Script = 'Install-Llm.ps1'; Args = @{ Model = 'IQ3_S'; RunSetup = $true; NoStart = $true } })
 }
 
 Write-B65Log ("Download queue: " + (($queue | ForEach-Object { $_.Name }) -join ' -> ')) -Name 'download-all'
