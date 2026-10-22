@@ -1,7 +1,7 @@
 # Llm.ps1 - start, stop, restart and inspect the local Qwen3.8-Flash-Next engine.
 [CmdletBinding()]
 param(
-    [ValidateSet('start', 'stop', 'restart', 'status', 'use', 'switch', 'list')][string]$Action = 'status',
+    [ValidateSet('start', 'stop', 'restart', 'status', 'use', 'switch', 'list', 'endpoint')][string]$Action = 'status',
     [string]$Model = '',
     [switch]$OpenFirewall,
     [switch]$NoWatchdog
@@ -231,6 +231,17 @@ switch ($Action) {
     'use'     { if (-not $Model) { throw 'Usage: .\b65.ps1 llm use -Model IQ3_XXS' }; & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') -Model $Model }
     'switch'  { Switch-LlmModel }
     'list'    { Show-LlmModels }
+    'endpoint' {
+        $s = Get-B65Status
+        if (-not $s.llm.running) { throw 'LLM is not running. Start it first.' }
+        [pscustomobject]@{
+            baseURL  = 'http://{0}:{1}/v1' -f $s.lanIp, $s.llm.port
+            localURL = 'http://127.0.0.1:{0}/v1' -f $s.llm.port
+            model    = $s.llm.model
+            apiKey   = $s.llm.apiKey
+            context  = $s.llm.context
+        } | ConvertTo-Json
+    }
     'stop'    { Stop-LlmInternal; Write-B65Log 'LLM stopped.' -Name 'llm' }
     'restart' { Stop-LlmInternal; Start-Sleep -Seconds 2; Start-LlmInternal }
     'status'  {

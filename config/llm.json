@@ -1,7 +1,7 @@
 {
   "exe": "apps/XeStrata/xestrata-cli.exe",
   "gui": "apps/XeStrata/xestrata.exe",
-  "model": "IQ2_XS",
+  "model": "IQ3_XXS",
   "context": 32768,
   "vision": false,
   "host": "0.0.0.0",
@@ -38,6 +38,6 @@
       "note": "Best quality; 64 GB PC with little else running"
     }
   },
-  "lowRam": "auto",
-  "residentBudgetGiB": -1
+  "lowRam": "on",
+  "residentBudgetGiB": 0
 }

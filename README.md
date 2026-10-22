@@ -107,6 +107,7 @@ See [docs/00-panel.md](docs/00-panel.md).
 | `download-all` | resumable queue: video draft → video final → LLM IQ3_XXS → IQ3_S |
 | `downloads` | live download panel; `-Active` shows only in-progress files with speed/ETA |
 | `llm start\|stop\|restart\|status` | LLM lifecycle |
+| `llm list\|use\|switch\|endpoint` | model profiles, switch, print API endpoint JSON |
 | `video start\|stop\|restart\|status` | ComfyUI lifecycle |
 | `mode llm\|video\|idle` | exclusive switch (stops the other engine) |
 | `status [-Json]` | RAM/VRAM/process snapshot |

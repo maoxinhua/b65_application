@@ -27,6 +27,7 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
 # 只改配置 / 改配置并重启
 .\b65.ps1 llm use    -Model IQ3_XXS
 .\b65.ps1 llm switch -Model IQ3_XXS
+.\b65.ps1 llm endpoint   # JSON: baseURL / localURL / model / apiKey
 ```
 
 ## 配置
@@ -46,7 +47,7 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
   "dataDir": "runtime/xestrata",
   "modelsDir": "models/llm",
   "residentBudgetGiB": 0,
-  "lowRam": "auto",
+  "lowRam": "on",
   "optionalArgs": true
 }
 ```
@@ -56,8 +57,9 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
 - `vramReserveMiB = 1024` 给 WDDM 桌面/浏览器留余量。
 - `vision = false` → 传 `--vision no`；要读图再改 true。
 - `optionalArgs = false` 可在引擎不认 `--vram-reserve-mib` 时退回最小参数集。
-- `residentBudgetGiB = 0` 表示交给引擎自动；只有确认 `--resident-budget-gib` 对该量化有效时才设。
-- `lowRam = auto` 是引擎默认；需要强制 `on/off/resident/mmap` 时改这里。
+- `residentBudgetGiB = 0` 表示交给引擎自动。**IQ3_XXS 上设 48 会触发 strata SIGSEGV**，不要手动设预算。
+- `lowRam = on` 让 IQ3_XXS 把部分专家放到 SSD/mmap：实测内存从只剩 1.7 GB 回到 ~35 GB 空闲，decode 仍有 ~45–48 tok/s。
+- 切到 IQ2_XS 时 `Use-LlmModel` 会自动把 `lowRam` 改回 `auto`。
 
 ## 性能预期
 
