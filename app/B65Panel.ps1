@@ -323,7 +323,7 @@ function Update-Status {
     $script:ValWatch.Text = if ($st.watchdog -and $null -ne $st.watchdog.freeGB) { ('free {0} GB' -f $st.watchdog.freeGB) } else { 'n/a' }
 
     $script:LlmPid.Text = [string]$st.llm.pid
-    $script:LlmPort.Text = [string]$st.llm.port
+    $script:LlmPort.Text = if ($st.llm.running) { [string]$st.llm.port } else { '-' }
     $llmCfg = Get-B65Config -Name llm
     $script:LlmModel.Text = if ($st.llm.model) { [string]$st.llm.model } else { [string]$llmCfg.model }
     $script:LlmCtx.Text = if ($st.llm.context) { [string]$st.llm.context } else { [string]$llmCfg.context }
@@ -337,9 +337,15 @@ function Update-Status {
     $script:VideoPid.Text = [string]$st.video.pid
     $script:VideoPort.Text = [string]$st.video.port
     $script:VideoVram.Text = ('{0} MB' -f $st.video.vramMB)
-    $script:LastLlmPort = [int]$st.llm.port
-    $script:ApiUrl.Text = 'http://{0}:{1}/v1' -f $st.lanIp, $st.llm.port
-    $script:ApiKey.Text = if ($st.llm.apiKey) { [string]$st.llm.apiKey } else { '(none)' }
+    if ($st.llm.running) {
+        $script:LastLlmPort = [int]$st.llm.port
+        $script:ApiUrl.Text = 'http://{0}:{1}/v1' -f $st.lanIp, $st.llm.port
+        $script:ApiKey.Text = if ($st.llm.apiKey) { [string]$st.llm.apiKey } else { '(none)' }
+    } else {
+        $script:LastLlmPort = 0
+        $script:ApiUrl.Text = if ($st.llm.setup) { '（模型下载/准备中，尚未提供 API）' } else { '(LLM stopped)' }
+        $script:ApiKey.Text = '(none)'
+    }
 }
 
 function Refresh-LogList {
