@@ -96,7 +96,7 @@ models\llm\IQ2_XS\...
 xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
   --api-key <40位> --no-browser --yes --vision no --source modelscope
   --data-dir runtime\xestrata --models-dir models\llm
-  --vram-reserve-mib 1024 --kv int8 --low-ram mmap --no-warmup
+  --vram-reserve-mib 512 --kv int8 --low-ram mmap --no-warmup
 ```
 
 ### 3.3 内存布局
@@ -160,6 +160,7 @@ xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
 | `Start-Dashboard.ps1` | Web dashboard `:8099`，适合手机/另一台机器 |
 | `Test-Llm.ps1` | API 冒烟、质量、token 速率 |
 | `Watch-Resources.ps1` | 5 秒采样，写 `health.json`，低内存自动停 LLM |
+| 面板“上下文”下拉 | 8K/32K/64K/128K/256K，应用后 `llm switch -Context` 重启生效 |
 | `Doctor.ps1` | 环境/端口/驱动/编码器自检 |
 | `Watch-Downloads.ps1` | 下载速度/ETA（`-Active` 只看进行中） |
 

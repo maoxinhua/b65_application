@@ -92,7 +92,7 @@ output\llm-tests\llm-test-<时间>.csv
   "maxOutputTokens": 8192,
   "temperature": 0.7,
   "topP": 0.95,
-  "vramReserveMiB": 1024,
+  "vramReserveMiB": 512,
   "parallel": 1
 }
 ```
@@ -246,6 +246,18 @@ curl -s http://127.0.0.1:<port>/v1/chat/completions \
 | IQ3_XXS + `on` + WSL 关 | ~48 tok/s | ~12 GB |
 | IQ3_S + `mmap` | 预计 25–35 tok/s | 更紧，未正式测 |
 
+### 512 MiB reserve 实测
+
+把 `vramReserveMiB` 从 1024 降到 512 后，IQ3_XXS 32K、WSL 开：
+
+| 测试 | decode |
+|---|---:|
+| math | 38 / 46 tok/s |
+| 中文 | 38.8 / 39.4 / 40.1 tok/s |
+| JSON | 44.7 / 47.1 / 47.7 tok/s |
+
+与 1024 的 30–52 tok/s 在噪声范围内，**没有可测的提速**；shared VRAM 略降。保留 512 作为更省显存的配置，若驱动/面板不稳可回 1024。
+
 ## 6. 稳定性/内存测试
 
 - 连续对话 30–60 分钟，或批量跑 20 个请求；
@@ -301,7 +313,7 @@ curl -s http://127.0.0.1:<port>/v1/chat/completions \
   "lowRam": "mmap",
   "residentBudgetGiB": 0,
   "context": 32768,
-  "vramReserveMiB": 1024,
+  "vramReserveMiB": 512,
   "parallel": 1
 }
 ```
@@ -311,7 +323,7 @@ curl -s http://127.0.0.1:<port>/v1/chat/completions \
 ### 7.3 其他参数
 
 - `context=32768`：32K 是稳定档；再大 KV 挤占专家缓存。
-- `vramReserveMiB=1024`：给桌面/浏览器留余量；4K 桌面可到 2048。
+- `vramReserveMiB=512`：给桌面/浏览器留 512 MB；实测 1024→512 的 tok/s 提升在噪声范围内（shared VRAM 略降），不稳定时回 1024。
 - `parallel=1`：单用户最快；多用户再考虑 2。
 - `--kv int8`：默认，够用。
 - 页面文件保持 24 GB；IQ3_XXS mmap 会用到 4–10 GB。

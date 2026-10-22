@@ -284,15 +284,40 @@ function Get-ModelKey([string]$Name) {
     return 'IQ2_XS'
 }
 
+function Get-CtxValue {
+    if (-not $script:CtxCombo) { return $null }
+    $s = [string]$script:CtxCombo.SelectedItem
+    if ($s -match '^(\d+)K$') { return [int]$matches[1] * 1024 }
+    if ($s -match '^\d+$') { return [int]$s }
+    return $null
+}
+
+function Sync-CtxCombo {
+    param([int]$Value)
+    if (-not $script:CtxCombo) { return }
+    $label = if ($Value -gt 0 -and $Value % 1024 -eq 0) { ('{0}K' -f [int]($Value / 1024)) } else { [string]$Value }
+    $items = @($script:CtxCombo.Items | ForEach-Object { [string]$_ })
+    $script:CtxSyncing = $true
+    try {
+        if ($items -notcontains $label) { [void]$script:CtxCombo.Items.Add($label) }
+        $idx = $script:CtxCombo.Items.IndexOf($label)
+        if ($idx -ge 0) { $script:CtxCombo.SelectedIndex = $idx }
+    } finally {
+        $script:CtxSyncing = $false
+    }
+}
+
 function Update-ModelInfo {
-    if (-not $script:ModelCombo) { return }
+    if (-not $script:ModelCombo -or -not $script:ModelInfo) { return }
     $m = [string]$script:ModelCombo.SelectedItem
     if (-not $m) { return }
     $cfg = Get-B65Config -Name llm
+    $ctx = Get-CtxValue
+    if (-not $ctx) { $ctx = [int]$cfg.context }
     $p = if ($cfg.modelCatalog) { $cfg.modelCatalog.$m } else { $null }
     if ($p) {
         $size = if ($p.sizeGB) { [string]$p.sizeGB } else { '?' }
-        $script:ModelInfo.Text = ('{0}  |  ~{1} GB RAM  |  {2} GB download  |  ctx={3} lowRam={4}  |  {5}' -f $p.label, $p.ramGB, $size, $cfg.context, $cfg.lowRam, $p.note)
+        $script:ModelInfo.Text = ('{0}  |  ~{1} GB RAM  |  {2} GB download  |  ctx={3} lowRam={4}  |  {5}' -f $p.label, $p.ramGB, $size, $ctx, $cfg.lowRam, $p.note)
     } else {
         $script:ModelInfo.Text = $m
     }
@@ -331,6 +356,10 @@ function Update-Status {
         $currentModel = if ($st.llm.running -and $st.llm.model) { [string]$st.llm.model } else { [string]$llmCfg.model }
         $key = Get-ModelKey $currentModel
         if ([string]$script:ModelCombo.SelectedItem -ne $key) { $script:ModelCombo.SelectedItem = $key }
+    }
+    if ($script:CtxCombo -and -not $script:CtxDirty -and -not $script:CtxCombo.Focused) {
+        $ctxNow = if ($st.llm.running -and $st.llm.context) { [int]$st.llm.context } else { [int]$llmCfg.context }
+        Sync-CtxCombo $ctxNow
     }
     $script:LlmRss.Text = if ($st.llm.stats -and $st.llm.stats.rssMB) { ('{0} MB' -f $st.llm.stats.rssMB) } else { '-' }
     $script:LlmVram.Text = ('{0} MB' -f $st.llm.vramMB)
@@ -529,8 +558,34 @@ $svc.Controls.Add((New-Lbl -Text '模型' -X 14 -Y 42 -W 80 -H 20 -Color $script
 $script:LlmModel = New-Lbl -Text '-' -X 100 -Y 42 -W 450 -H 20 -Bold $true
 $svc.Controls.Add($script:LlmModel)
 $svc.Controls.Add((New-Lbl -Text '上下文' -X 14 -Y 70 -W 80 -H 20 -Color $script:Muted))
-$script:LlmCtx = New-Lbl -Text '-' -X 100 -Y 70 -W 200 -H 20
+$script:LlmCtx = New-Lbl -Text '-' -X 100 -Y 70 -W 120 -H 20
 $svc.Controls.Add($script:LlmCtx)
+$svc.Controls.Add((New-Lbl -Text '改为' -X 230 -Y 70 -W 40 -H 20 -Color $script:Muted))
+$script:CtxCombo = New-Object System.Windows.Forms.ComboBox
+$script:CtxCombo.Location = New-Object System.Drawing.Point(280, 66)
+$script:CtxCombo.Size = New-Object System.Drawing.Size(100, 24)
+$script:CtxCombo.DropDownStyle = 'DropDownList'
+$script:CtxCombo.BackColor = C '#0b1220'
+$script:CtxCombo.ForeColor = $script:Text
+[void]$script:CtxCombo.Items.AddRange(@('8K', '32K', '64K', '128K', '256K'))
+$script:CtxDirty = $false
+$script:CtxSyncing = $false
+$script:CtxCombo.Add_SelectedIndexChanged({
+    if (-not $script:CtxSyncing) { $script:CtxDirty = $true }
+    Update-ModelInfo
+})
+$svc.Controls.Add($script:CtxCombo)
+$script:CtxTip = New-Object System.Windows.Forms.ToolTip
+$script:CtxTip.SetToolTip($script:CtxCombo, '上下文越长，KV 越大、专家缓存越少；应用会重启模型。DSH 的 contextWindow 需同步。')
+$svc.Controls.Add((New-Btn -Text '应用上下文' -X 390 -Y 64 -W 130 -H 30 -Color (C '#334155') -OnClick {
+    $cfg = Get-B65Config -Name llm
+    $m = if ($script:ModelCombo -and $script:ModelCombo.SelectedItem) { [string]$script:ModelCombo.SelectedItem } else { [string]$cfg.model }
+    $ctx = Get-CtxValue
+    if (-not $ctx) { Add-Log '未选择上下文'; return }
+    $script:CtxDirty = $false
+    Start-Action -Label ("应用上下文 $([int]($ctx / 1024))K") -ActionArgs @('llm', 'switch', '-Model', $m, '-Context', [string]$ctx)
+}))
+Sync-CtxCombo ([int](Get-B65Config -Name llm).context)
 $svc.Controls.Add((New-Lbl -Text '端口' -X 14 -Y 98 -W 80 -H 20 -Color $script:Muted))
 $script:LlmPort = New-Lbl -Text '-' -X 100 -Y 98 -W 200 -H 20
 $svc.Controls.Add($script:LlmPort)
@@ -550,7 +605,7 @@ $svc.Controls.Add((New-Btn -Text '重启' -X 290 -Y 208 -W 100 -H 32 -Color (C '
 $svc.Controls.Add((New-Btn -Text '打开 API' -X 398 -Y 208 -W 110 -H 32 -Color $script:Accent -OnClick { Open-Llm }))
 $llm.Controls.Add($svc)
 
-$api = New-Card -X 12 -Y 266 -W 580 -H 180 -Title 'LAN API'
+$api = New-Card -X 12 -Y 416 -W 580 -H 180 -Title 'LAN API'
 $api.Controls.Add((New-Lbl -Text 'Base URL' -X 14 -Y 42 -W 80 -H 20 -Color $script:Muted))
 $script:ApiUrl = New-Lbl -Text '-' -X 100 -Y 42 -W 460 -H 20 -Bold $true
 $api.Controls.Add($script:ApiUrl)
@@ -565,7 +620,7 @@ $api.Controls.Add((New-Btn -Text '复制 API Key' -X 162 -Y 104 -W 140 -H 32 -Co
 }))
 $api.Controls.Add((New-Lbl -Text '提示：加载 LLM 前会先停掉 ComfyUI，32 GB 显存一次只跑一项。' -X 14 -Y 148 -W 540 -H 30 -Size 8.5 -Color $script:Muted))
 $llm.Controls.Add($api)
-$modelCard = New-Card -X 12 -Y 456 -W 580 -H 140 -Title '模型档位'
+$modelCard = New-Card -X 12 -Y 266 -W 580 -H 140 -Title '模型档位'
 $modelCard.Controls.Add((New-Lbl -Text '模型' -X 14 -Y 40 -W 50 -H 20 -Color $script:Muted))
 $script:ModelCombo = New-Object System.Windows.Forms.ComboBox
 $script:ModelCombo.Location = New-Object System.Drawing.Point(64, 36)
@@ -581,7 +636,12 @@ $script:ModelInfo = New-Lbl -Text '' -X 14 -Y 66 -W 540 -H 30 -Size 8.5 -Color $
 $modelCard.Controls.Add($script:ModelInfo)
 $modelCard.Controls.Add((New-Btn -Text '应用并重启' -X 14 -Y 100 -W 130 -H 30 -Color $script:Green -OnClick {
     $m = [string]$script:ModelCombo.SelectedItem
-    Start-Action -Label ("切换到 $m") -ActionArgs @('llm', 'switch', '-Model', $m)
+    $ctx = Get-CtxValue
+    $args = @('llm', 'switch', '-Model', $m)
+    if ($ctx) { $args += @('-Context', [string]$ctx) }
+    $script:CtxDirty = $false
+    $label = if ($ctx) { "切换到 $m / $([int]($ctx / 1024))K" } else { "切换到 $m" }
+    Start-Action -Label $label -ActionArgs $args
 }))
 $modelCard.Controls.Add((New-Btn -Text '下载 / 更新' -X 152 -Y 100 -W 120 -H 30 -Color $script:Accent -OnClick {
     if ($script:LastSetup) { Add-Log "已有模型下载/准备任务在运行：$($script:LastSetup.model)"; return }
@@ -590,21 +650,25 @@ $modelCard.Controls.Add((New-Btn -Text '下载 / 更新' -X 152 -Y 100 -W 120 -H
 }))
 $modelCard.Controls.Add((New-Btn -Text '选项...' -X 280 -Y 100 -W 90 -H 30 -Color (C '#334155') -OnClick {
     Open-Config 'llm.json'
-    Add-Log '在 llm.json 修改 context / lowRam / kv / maxOutputTokens 后，点“应用并重启”。'
+    Add-Log 'context 也可用面板下拉；lowRam / kv / maxOutputTokens 仍在 llm.json 修改后点“应用并重启”。'
 }))
-$modelCard.Controls.Add((New-Btn -Text '刷新档位' -X 378 -Y 100 -W 90 -H 30 -Color (C '#334155') -OnClick { Update-ModelInfo }))
+$modelCard.Controls.Add((New-Btn -Text '刷新档位' -X 378 -Y 100 -W 90 -H 30 -Color (C '#334155') -OnClick {
+    Sync-CtxCombo ([int](Get-B65Config -Name llm).context)
+    $script:CtxDirty = $false
+    Update-ModelInfo
+}))
 $llm.Controls.Add($modelCard)
 Update-ModelInfo
 
 
 $help = New-Card -X 606 -Y 12 -W 580 -H 434 -Title '工作方式'
 $helpText = @"
-1. 点“加载 / 启动”：XeStrata 加载 IQ2_XS 到 B65；API 端口以本页“端口 / Base URL”为准（可能不是 8095）。
+1. 点“加载 / 启动”：XeStrata 加载当前模型（默认 IQ3_XXS），端口固定 8095（noWarmup=true）。
 2. 第一次加载会建立专家缓存，耗时较长；看下方 ACTIVITY LOG。
 3. “卸载 / 停止”会释放显存，再切到视频。
 4. API 兼容 OpenAI：POST /v1/chat/completions。
 5. 如果系统内存低于 watchdog 阈值，会自动停止 LLM。
-6. 配置在 config\llm.json，改完点“重启”。
+6. 上下文可直接用“改为”下拉 + “应用上下文”重启；其余配置在 config\llm.json。
 "@
 $help.Controls.Add((New-Lbl -Text $helpText -X 14 -Y 40 -W 548 -H 250 -Size 9 -Color $script:Text))
 $help.Controls.Add((New-Btn -Text '编辑 llm.json' -X 14 -Y 300 -W 150 -H 32 -Color (C '#334155') -OnClick { Open-Config 'llm.json' }))

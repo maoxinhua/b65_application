@@ -42,7 +42,7 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
   "vision": false,
   "host": "0.0.0.0",
   "port": 8095,
-  "vramReserveMiB": 1024,
+  "vramReserveMiB": 512,
   "parallel": 1,
   "source": "modelscope",
   "dataDir": "runtime/xestrata",
@@ -60,7 +60,7 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
 
 - `dataDir` / `modelsDir` 让模型和配置落在工作路径下；每个档位在 `models\llm\<档位>`。
 - `source = modelscope` 国内下载更快；可改 `huggingface` 或 `auto`。
-- `vramReserveMiB = 1024` 给 WDDM 桌面/浏览器留余量。
+- `vramReserveMiB = 512` 给 WDDM 桌面/浏览器留余量；实测 1024→512 没有明显提速，不稳时回 1024。
 - `vision = false` → 传 `--vision no`；要读图再改 true。
 - `optionalArgs = false` 可在引擎不认 `--vram-reserve-mib` 时退回最小参数集。
 - `residentBudgetGiB = 0` 表示交给引擎自动。**IQ3_XXS 上设 48 会触发 strata SIGSEGV**，不要手动设预算。

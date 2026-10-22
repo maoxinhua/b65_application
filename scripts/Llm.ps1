@@ -51,6 +51,7 @@ function Stop-LlmInternal {
 }
 
 function Start-LlmInternal {
+    $script:llm = Get-B65Config -Name llm
     $state = Get-B65State
     $setup = Get-B65LlmSetup
     if ($setup) {
@@ -228,10 +229,20 @@ function Show-LlmModels {
 
 function Set-LlmOptions {
     param([string]$TargetModel)
+    $cfg = Get-B65Config -Name llm
+    $sameModel = $TargetModel -eq [string]$cfg.model
     $useArgs = @{ Model = $TargetModel }
     if ($Context -gt 0) { $useArgs['Context'] = $Context }
-    if ($LowRam) { $useArgs['LowRam'] = $LowRam }
-    if ($Kv) { $useArgs['Kv'] = $Kv }
+    if ($LowRam) {
+        $useArgs['LowRam'] = $LowRam
+    } elseif ($sameModel -and $cfg.lowRam) {
+        $useArgs['LowRam'] = [string]$cfg.lowRam
+    }
+    if ($Kv) {
+        $useArgs['Kv'] = $Kv
+    } elseif ($sameModel -and $cfg.kv) {
+        $useArgs['Kv'] = [string]$cfg.kv
+    }
     & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') @useArgs
 }
 
