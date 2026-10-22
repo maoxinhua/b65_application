@@ -3,7 +3,10 @@
 param(
     [Parameter(Mandatory = $true)][ValidateSet('IQ2_XS', 'IQ3_XXS', 'IQ3_S')][string]$Model,
     [int]$Context = 0,
-    [int]$ResidentBudgetGiB = -1
+    [int]$ResidentBudgetGiB = -1,
+    [ValidateSet('auto', 'mmap', 'on')][string]$LowRam = '',
+    [ValidateSet('int8', 'q4_0', 'k8v4')][string]$Kv = '',
+    [int]$MaxOutputTokens = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,8 +23,16 @@ if (-not $gguf -or $gguf.Count -eq 0) {
 
 $cfg.model = $Model
 if ($Context -gt 0) { $cfg.context = $Context }
-$cfg | Add-Member -NotePropertyName lowRam -NotePropertyValue $(if ($Model -eq 'IQ2_XS') { 'auto' } else { 'mmap' }) -Force
-$cfg | Add-Member -NotePropertyName residentBudgetGiB -NotePropertyValue ([int]$ResidentBudgetGiB) -Force
+if ($LowRam) {
+    $cfg.lowRam = $LowRam
+} else {
+    $cfg.lowRam = if ($Model -eq 'IQ2_XS') { 'auto' } else { 'mmap' }
+}
+if ($Kv) { $cfg | Add-Member -NotePropertyName kv -NotePropertyValue $Kv -Force }
+if ($MaxOutputTokens -gt 0) { $cfg | Add-Member -NotePropertyName maxOutputTokens -NotePropertyValue $MaxOutputTokens -Force }
+if ($ResidentBudgetGiB -ge 0) {
+    $cfg | Add-Member -NotePropertyName residentBudgetGiB -NotePropertyValue ([int]$ResidentBudgetGiB) -Force
+}
 Write-B65Json -Path $configPath -Value $cfg
 
 $profile = $null

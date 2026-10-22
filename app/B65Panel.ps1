@@ -292,7 +292,7 @@ function Update-ModelInfo {
     $p = if ($cfg.modelCatalog) { $cfg.modelCatalog.$m } else { $null }
     if ($p) {
         $size = if ($p.sizeGB) { [string]$p.sizeGB } else { '?' }
-        $script:ModelInfo.Text = ('{0}  |  ~{1} GB RAM  |  {2} GB download  |  {3}' -f $p.label, $p.ramGB, $size, $p.note)
+        $script:ModelInfo.Text = ('{0}  |  ~{1} GB RAM  |  {2} GB download  |  ctx={3} lowRam={4}  |  {5}' -f $p.label, $p.ramGB, $size, $cfg.context, $cfg.lowRam, $p.note)
     } else {
         $script:ModelInfo.Text = $m
     }
@@ -588,7 +588,11 @@ $modelCard.Controls.Add((New-Btn -Text '下载 / 更新' -X 152 -Y 100 -W 120 -H
     $m = [string]$script:ModelCombo.SelectedItem
     Start-Action -Label ("下载 $m") -ActionArgs @('install', 'llm', '-Model', $m, '-RunSetup', '-NoStart', '-SetDefault')
 }))
-$modelCard.Controls.Add((New-Btn -Text '刷新档位' -X 280 -Y 100 -W 100 -H 30 -Color (C '#334155') -OnClick { Update-ModelInfo }))
+$modelCard.Controls.Add((New-Btn -Text '选项...' -X 280 -Y 100 -W 90 -H 30 -Color (C '#334155') -OnClick {
+    Open-Config 'llm.json'
+    Add-Log '在 llm.json 修改 context / lowRam / kv / maxOutputTokens 后，点“应用并重启”。'
+}))
+$modelCard.Controls.Add((New-Btn -Text '刷新档位' -X 378 -Y 100 -W 90 -H 30 -Color (C '#334155') -OnClick { Update-ModelInfo }))
 $llm.Controls.Add($modelCard)
 Update-ModelInfo
 

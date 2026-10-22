@@ -3,6 +3,9 @@
 param(
     [ValidateSet('start', 'stop', 'restart', 'status', 'use', 'switch', 'list', 'endpoint')][string]$Action = 'status',
     [string]$Model = '',
+    [int]$Context = 0,
+    [ValidateSet('auto', 'mmap', 'on')][string]$LowRam = '',
+    [ValidateSet('int8', 'q4_0', 'k8v4')][string]$Kv = '',
     [switch]$OpenFirewall,
     [switch]$NoWatchdog
 )
@@ -119,6 +122,11 @@ function Start-LlmInternal {
     if ($llm.residentBudgetGiB -and [int]$llm.residentBudgetGiB -gt 0) {
         $startArgs += @('--resident-budget-gib', [string]$llm.residentBudgetGiB)
     }
+    if ($llm.kv) { $startArgs += @('--kv', [string]$llm.kv) }
+    if ($llm.ropeScaling -and [string]$llm.ropeScaling -ne 'none') {
+        $startArgs += @('--rope-scaling', [string]$llm.ropeScaling)
+    }
+    if ($llm.noWarmup) { $startArgs += '--no-warmup' }
     if ($llm.lowRam -and [string]$llm.lowRam -ne 'auto') {
         $startArgs += @('--low-ram', [string]$llm.lowRam)
     }
@@ -218,9 +226,21 @@ function Show-LlmModels {
     $rows | Format-Table Model, Installed, SizeGB, RAMGB, Default, Note -AutoSize
 }
 
+function Set-LlmOptions {
+    param([string]$TargetModel)
+    $useArgs = @{ Model = $TargetModel }
+    if ($Context -gt 0) { $useArgs['Context'] = $Context }
+    if ($LowRam) { $useArgs['LowRam'] = $LowRam }
+    if ($Kv) { $useArgs['Kv'] = $Kv }
+    & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') @useArgs
+}
+
 function Switch-LlmModel {
-    if (-not $Model) { throw 'Usage: .\b65.ps1 llm switch -Model IQ3_XXS' }
-    & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') -Model $Model
+    $cfg = Get-B65Config -Name llm
+    $target = if ($Model) { $Model } else { [string]$cfg.model }
+    if ($target -ne [string]$cfg.model -or $Context -gt 0 -or $LowRam -or $Kv) {
+        Set-LlmOptions -TargetModel $target
+    }
     Stop-LlmInternal
     Start-Sleep -Seconds 2
     Start-LlmInternal
@@ -228,7 +248,10 @@ function Switch-LlmModel {
 
 switch ($Action) {
     'start'   { Start-LlmInternal }
-    'use'     { if (-not $Model) { throw 'Usage: .\b65.ps1 llm use -Model IQ3_XXS' }; & (Join-Path $PSScriptRoot 'Use-LlmModel.ps1') -Model $Model }
+    'use'     {
+        $target = if ($Model) { $Model } else { [string](Get-B65Config -Name llm).model }
+        Set-LlmOptions -TargetModel $target
+    }
     'switch'  { Switch-LlmModel }
     'list'    { Show-LlmModels }
     'endpoint' {
@@ -240,6 +263,11 @@ switch ($Action) {
             model    = $s.llm.model
             apiKey   = $s.llm.apiKey
             context  = $s.llm.context
+            maxOutputTokens = (Get-B65Config -Name llm).maxOutputTokens
+            lowRam   = (Get-B65Config -Name llm).lowRam
+            kv       = (Get-B65Config -Name llm).kv
+            temperature = (Get-B65Config -Name llm).temperature
+            topP     = (Get-B65Config -Name llm).topP
         } | ConvertTo-Json
     }
     'stop'    { Stop-LlmInternal; Write-B65Log 'LLM stopped.' -Name 'llm' }

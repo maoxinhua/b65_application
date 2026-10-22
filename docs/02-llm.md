@@ -38,6 +38,7 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
 {
   "model": "IQ3_XXS",
   "context": 32768,
+  "contextPresets": [32768, 65536, 131072, 262144],
   "vision": false,
   "host": "0.0.0.0",
   "port": 8095,
@@ -48,6 +49,11 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
   "modelsDir": "models/llm",
   "residentBudgetGiB": 0,
   "lowRam": "mmap",
+  "kv": "int8",
+  "noWarmup": true,
+  "maxOutputTokens": 8192,
+  "temperature": 0.7,
+  "topP": 0.95,
   "optionalArgs": true
 }
 ```
@@ -58,10 +64,12 @@ XeStrata `--check` 的保守估计是 IQ3_XXS ~60 GB、IQ3_S ~62 GB；setup 运�
 - `vision = false` → 传 `--vision no`；要读图再改 true。
 - `optionalArgs = false` 可在引擎不认 `--vram-reserve-mib` 时退回最小参数集。
 - `residentBudgetGiB = 0` 表示交给引擎自动。**IQ3_XXS 上设 48 会触发 strata SIGSEGV**，不要手动设预算。
-- `lowRam = mmap`（IQ3_XXS 默认）把专家按需映射：实测请求后仍有 ~20 GB 空闲，decode ~27 tok/s。
+- `lowRam = mmap`（IQ3_XXS 默认）把专家按需映射：实测请求后 9–23 GB 空闲，decode 30–55 tok/s。
 - `lowRam = on` 更快：~45–48 tok/s，但请求后只剩 ~5 GB 空闲，系统会明显变慢；适合专用跑分/批处理。
 - `lowRam = auto`（IQ2_XS）按引擎默认，IQ2_XS 只需 ~48 GB，日常最稳。
 - 切档位时 `Use-LlmModel` 会自动设置：IQ2_XS → `auto`，IQ3_XXS/IQ3_S → `mmap`。
+- `noWarmup = true` 让服务固定绑 8095，DSH 的 baseURL 不用每次改；首次请求会慢一点。
+- `kv = int8`；`maxOutputTokens` / `temperature` / `topP` 是给 DSH/客户端的默认值。
 
 ## 性能预期
 

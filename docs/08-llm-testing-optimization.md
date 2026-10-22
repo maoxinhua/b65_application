@@ -77,6 +77,86 @@ output\llm-tests\llm-test-<时间>.csv
 
 > `test-llm` 的请求体按 UTF-8 字节发送、响应按 UTF-8 解码；PowerShell 5.1 直接传字符串会在中文/`×` 上出错，脚本已经处理。
 
+## 3. 自定义选项（IQ3_XXS）
+
+运行选项集中在 `config\llm.json`：
+
+```json
+{
+  "model": "IQ3_XXS",
+  "context": 32768,
+  "contextPresets": [32768, 65536, 131072, 262144],
+  "lowRam": "mmap",
+  "kv": "int8",
+  "noWarmup": true,
+  "maxOutputTokens": 8192,
+  "temperature": 0.7,
+  "topP": 0.95,
+  "vramReserveMiB": 1024,
+  "parallel": 1
+}
+```
+
+| 选项 | 作用 |
+|---|---|
+| `context` | 启动时的上下文长度；改完要重启 |
+| `contextPresets` | 面板/脚本可选档位，仅作 UI 提示 |
+| `lowRam` | `mmap`（省内存） / `on`（更快） / `auto` |
+| `kv` | `int8` / `q4_0` / `k8v4`；默认 int8 |
+| `noWarmup` | **true 时固定绑 8095**，跳过随机 warm-up 端口 |
+| `maxOutputTokens` | 给 DSH/客户端的默认输出上限 |
+| `temperature` / `topP` | 客户端默认采样参数 |
+| `vramReserveMiB` | 给桌面留的显存 |
+| `parallel` | 并发请求数，单用户 1 |
+
+命令行覆盖：
+
+```powershell
+.\b65.ps1 llm use    -Model IQ3_XXS -Context 65536 -LowRam mmap -Kv int8
+.\b65.ps1 llm switch -Model IQ3_XXS -Context 65536 -LowRam mmap -Kv int8
+.\b65.ps1 llm endpoint
+```
+
+面板 LLM 页底部“**选项...**”直接打开 `llm.json`；改完点“应用并重启”。
+
+### noWarmup 与端口
+
+XeStrata 的 warm-up 会临时绑一个随机端口，之前导致 DSH 的 `baseURL` 每次都要改。设置：
+
+```json
+"noWarmup": true
+```
+
+重启后实测稳定在：
+
+```text
+http://10.88.115.60:8095/v1
+```
+
+代价是第一次请求可能要编译 GPU 代码（几十秒），之后走缓存。
+
+## 3.1 最大上下文实测（WSL2 保持开启）
+
+测试条件：IQ3_XXS、`lowRam=mmap`、`kv=int8`、`noWarmup=true`、64 GB RAM、WSL2 运行中。
+
+| context | 能否加载 | 长输入实测 | 短请求 decode | 请求后空闲 RAM |
+|---:|---|---|---:|---:|
+| 32,768 | ✅ | **31,068 token**，prefill 1,291 tok/s，答案正确 | 30–55 tok/s | 23.5 GB |
+| 40,960 | ✅ | 未填满 | — | 23.5 GB |
+| 49,152 | ✅ | 未填满 | — | 23.6 GB |
+| 65,536 | ✅ | 未填满 | 24–38 tok/s | 22.1 GB |
+| 98,304 | ✅ | 未填满 | — | 21.7 GB |
+| 131,072 | ✅ | 未填满 | — | 22.5 GB |
+| 262,144 | ✅ | 未填满 | 26–32 tok/s | 27.3 GB |
+
+结论：
+
+- **模型原生最大上下文是 262,144（256K）**；
+- `--context 262144` 能加载，`/health` 返回 `max_context=262144`；
+- **32K 已经用 31,068 token 的真实输入验证**（不是只看配置）；
+- 64K/128K/256K 只验证了“能加载”，没有把上下文填满；填满 256K 需要约 25 万 token 的 prompt，耗时长且可能触发换页/变慢；
+- 日常建议 **32K 或 64K**；更大上下文会降低短请求速度，并增加内存压力。
+
 ## 3. 手工 API 验证
 
 ```powershell
@@ -281,7 +361,7 @@ C:\Users\eddy\.dsh\cordis.patch.yml
 
 ```json
 {
-  "baseURL": "http://10.88.115.60:63844/v1",
+  "baseURL": "http://10.88.115.60:8095/v1",
   "model": "qwen3.8-flash-next-iq3_xxs",
   "apiKey": "...."
 }
@@ -292,7 +372,7 @@ C:\Users\eddy\.dsh\cordis.patch.yml
 ```yaml
 qwen38-flash-next:
   apiKeyEnv: QWEN38_FLASH_NEXT_API_KEY
-  baseURL: http://10.88.115.60:63844/v1
+  baseURL: http://10.88.115.60:8095/v1
   models:
     - id: qwen3.8-flash-next-iq3_xxs
       contextWindow: 32768
@@ -302,7 +382,7 @@ qwen38-flash-next:
 
 然后重启 Windows DSH（home patch 文件新建时不会热加载）。
 
-> DSH 的 `baseURL` 是静态的，**端口一变就要改这一行**。如果嫌麻烦，后续可以加一个 8095 固定的本地 TCP 代理；目前以 `llm endpoint` 为准。
+> 因为默认 `noWarmup=true`，XeStrata 现在稳定绑 **8095**，DSH 的 `baseURL` 不用每次改。若你关掉 `noWarmup`，端口会变，必须重新跑 `llm endpoint`。
 
 ## 10. 推荐日常方案
 
