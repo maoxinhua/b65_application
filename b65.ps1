@@ -104,6 +104,7 @@ function Show-Help {
     Write-Host '  download-all                resumable queue: draft -> final -> LLM'
     Write-Host '  downloads                   live download speed / ETA panel'
     Write-Host '  llm start|stop|restart|status|use|switch|list|endpoint'
+    Write-Host '  test-llm                    smoke/quality/speed test against the running API'
     Write-Host '  video start|stop|restart|status'
     Write-Host '  mode llm|video|idle         exclusive GPU mode switch'
     Write-Host '  status [-Json]              RAM/VRAM/process snapshot'
@@ -139,6 +140,7 @@ switch ($Command.ToLowerInvariant()) {
     'download-all' { Invoke-Step -Name 'Download-All' -StepArgs $Rest }
     'downloads'    { Invoke-Step -Name 'Watch-Downloads' -StepArgs $Rest }
     'llm'       { Invoke-Step -Name 'Llm' -StepArgs $Rest }
+    'test-llm'  { Invoke-Step -Name 'Test-Llm' -StepArgs $Rest }
     'video'     { Invoke-Step -Name 'Video' -StepArgs $Rest }
     'mode'      { Invoke-Step -Name 'Mode' -StepArgs $Rest }
     'status'    { Invoke-Step -Name 'Get-Status' -StepArgs $Rest }

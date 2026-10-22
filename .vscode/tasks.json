@@ -308,6 +308,25 @@
       }
     },
     {
+      "label": "B65: Test LLM",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\Test-Llm.ps1",
+        "-Runs",
+        "1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "B65: Control panel",
       "type": "shell",
       "command": "powershell.exe",

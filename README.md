@@ -97,6 +97,11 @@ See [docs/00-panel.md](docs/00-panel.md).
 
 ![B65 Workbench](docs/panel.png)
 
+### LLM testing and tuning
+
+- [IQ3 testing and Windows optimization](docs/08-llm-testing-optimization.md)
+- Run ` .\b65.ps1 test-llm -Runs 3` for health/model/math/Chinese/JSON checks.
+
 ## Commands
 
 | Command | Purpose |
@@ -108,6 +113,7 @@ See [docs/00-panel.md](docs/00-panel.md).
 | `downloads` | live download panel; `-Active` shows only in-progress files with speed/ETA |
 | `llm start\|stop\|restart\|status` | LLM lifecycle |
 | `llm list\|use\|switch\|endpoint` | model profiles, switch, print API endpoint JSON |
+| `test-llm -Runs N` | smoke/quality/speed test against the running API |
 | `video start\|stop\|restart\|status` | ComfyUI lifecycle |
 | `mode llm\|video\|idle` | exclusive switch (stops the other engine) |
 | `status [-Json]` | RAM/VRAM/process snapshot |
