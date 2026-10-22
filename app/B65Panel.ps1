@@ -287,7 +287,7 @@ function Update-Status {
     $script:ValVideo.ForeColor = if ($st.video.running) { $script:Green } else { $script:Muted }
     $script:ValRam.Text = ('{0} / {1} GB' -f $st.memory.FreeGB, $st.memory.TotalGB)
     $script:ValVram.Text = ('{0} MB' -f $st.gpu.DedicatedMB)
-    $script:ValWatch.Text = if ($st.watchdog) { ('free {0} GB' -f $st.watchdog.freeGB) } else { 'n/a' }
+    $script:ValWatch.Text = if ($st.watchdog -and $null -ne $st.watchdog.freeGB) { ('free {0} GB' -f $st.watchdog.freeGB) } else { 'n/a' }
 
     $script:LlmPid.Text = [string]$st.llm.pid
     $script:LlmPort.Text = [string]$st.llm.port
