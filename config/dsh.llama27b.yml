@@ -1,0 +1,15 @@
+# DSH route for the local Qwen3.8-27B quality engine (llama.cpp SYCL, :8096).
+# Windows: baseURL http://10.88.115.60:8096/v1
+# WSL2 (mirrored): baseURL http://127.0.0.1:8096/v1
+qwen38-27b-local:
+  displayName: 13900_Qwen3.8-27B_UD-Q6_K_XL
+  apiKeyEnv: QWEN38_27B_API_KEY
+  api: openai-completions
+  baseURL: http://127.0.0.1:8096/v1
+  models:
+    - id: qwen3.8-27b-ud-q6kxl
+      name: 13900_Qwen3.8-27B_UD-Q6_K_XL
+      contextWindow: 65536
+      maxTokens: 8192
+      input:
+        - text

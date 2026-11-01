@@ -21,6 +21,8 @@
 | API 返回 401 | Key 不对 | 用 `.\b65.ps1 status` 里的 Key；Key 存在 `runtime\state.json` |
 | 局域网连不上 | 防火墙/绑定地址 | `llm start -OpenFirewall`；确认 `host=0.0.0.0`；同一网段 |
 | 输出乱码/重复 | 2-bit 量化 + 高温 | 降上下文；确认没开 `--parallel`；换 IQ3_S 需加内存 |
+| DSH 报 `Request timed out. TIMEOUT` | 本地服务没在跑（常见：watchdog 因内存低停掉）；WSL `127.0.0.1` 在无监听时会静默丢包约 10 秒，被 SDK 映射成超时 | 先 `.\b65.ps1 llm check`；`NOT READY` 就 `.\b65.ps1 llm start`；看 `runtime\logs\watchdog.log` 与 `runtime\health.json` |
+| `400 request exceeds the context window` | 会话历史超过服务端 `context`；XeStrata 明确不截断 | 新开会话或先压缩；把服务端 `context` 和 DSH `contextWindow` 同步调大（长会话 187K 时 128K 仍不够） |
 
 ## 视频（ComfyUI）
 
@@ -74,4 +76,4 @@ Get-Content runtime\logs\llm.stderr.log -Tail 100
 Get-Content runtime\logs\comfy.stderr.log -Tail 100
 ```
 
-同时记录：驱动版本、XeStrata 版本（`xe0.1.45-1`）、ComfyUI 版本、出错的工作流节点。
+同时记录：驱动版本、XeStrata 版本（`xe0.2.2-1`）、ComfyUI 版本、出错的工作流节点。

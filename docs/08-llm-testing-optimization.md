@@ -259,6 +259,23 @@ curl -s http://127.0.0.1:<port>/v1/chat/completions \
 
 与 1024 的 30–52 tok/s 在噪声范围内，**没有可测的提速**；shared VRAM 略降。保留 512 作为更省显存的配置，若驱动/面板不稳可回 1024。
 
+### XeStrata 0.2.2-1 / 128K 实测
+
+- 32K 暖机：math 29.7–40.5 tok/s，中文 33.4–35.2，JSON 36.4–37.0。
+- 128K、110,068 token：prefill **1,392 tok/s**，总耗时 **1m22s**，decode **41.0 tok/s**（0.1.45 为 439 tok/s / 4m13s）。
+- 结论：0.2.2 主要改善长上下文 prefill；短请求持平。
+- Gyro-M：92GB 下载、35GB RAM，B70 32K 90.8 vs IQ3_XXS 91.9，质量约同级；**不替换**。
+- Gyro-S：58.5GB/27.6GB，质量更低，作为小内存选项，不加入默认。
+
+### Qwen3.8-27B UD-Q6_K_XL（llama.cpp SYCL）
+
+- 模型：`models\llm\Qwen3.8-27B\Qwen3.8-27B-UD-Q6_K_XL.gguf`（25.3GB）+ Q4_0 MTP。
+- 32K 与 64K 均能加载；64K 显存约 30.8GB（27.6 dedicated + 3.2 shared），RAM 空闲约 15GB。
+- 短请求：math **40.7–51.2 tok/s**，中文 **38.0–38.6**，JSON **44.5–49.3**，代码 **40.3–49.3**，指令 **49–54**。
+- 3 轮质量测试全过；32K/64K 均未崩溃。
+- 24K prompt：首次 prefill **175.9 tok/s**，decode **37.5 tok/s**，答案正确；后续 prefix cache 命中时约 5.9 秒。
+- 64K 是当前稳定档；128K 未测（显存会超）。
+
 ## 6. 稳定性/内存测试
 
 - 连续对话 30–60 分钟，或批量跑 20 个请求；
@@ -272,14 +289,14 @@ curl -s http://127.0.0.1:<port>/v1/chat/completions \
 "watchdog": {
   "reserveRamGB": 12,
   "warnRamGB": 8,
-  "stopRamGB": 4,
-  "stopAfterSamples": 6,
+  "stopRamGB": 2,
+  "stopAfterSamples": 12,
   "graceSeconds": 180
 }
 ```
 
 - 日常（mmap，空闲 9–20 GB）：保持默认；
-- 质量模式（`on`，空闲 5 GB）：建议 `stopRamGB=2`，避免一次请求就被误杀；
+- 质量模式（`on`，空闲 5 GB）：建议 `stopRamGB=2`、`stopAfterSamples=12`，避免一次长请求就被误杀；
 - 专用跑分：可 `stopRamGB=1`，但要接受系统卡顿。
 
 ## 7. 配置优化
@@ -417,8 +434,9 @@ qwen38-flash-next:
 ## 12. 命令速查
 
 ```powershell
-# 状态 / 模型 / 端点
+# 状态 / 预检 / 模型 / 端点
 .\b65.ps1 status
+.\b65.ps1 llm check
 .\b65.ps1 llm list
 .\b65.ps1 llm endpoint
 
@@ -436,4 +454,50 @@ wsl --shutdown
 # 看内存/显存
 Get-CimInstance Win32_OperatingSystem |
   Select-Object @{n='FreeGB';e={[math]::Round($_.FreePhysicalMemory/1MB,1)}}
+```
+
+## 13. 复盘：DSH 本地模型 `Request timed out. TIMEOUT`（2026-10-22）
+
+**现象**：DSH 选择 `qwen38-flash-next` 后，新会话第一轮运行约 80 秒后失败：
+
+```text
+本轮运行失败
+Request timed out.
+TIMEOUT
+```
+
+**时间线（本机）**：
+
+| 时间 | 事件 |
+|---|---|
+| 17:23:36 | XeStrata 以 `context=131072` 启动 IQ3_XXS |
+| 17:25–17:29 | 110,068 token 长输入测试，prefill 250 s 成功；VRAM 约 34.4 GB，空闲 RAM 跌到 4 GB 附近 |
+| 17:29:47–17:30:48 | 空闲 RAM 连续 6 次低于 `stopRamGB=4` |
+| 17:30:48 | watchdog 停止 LLM：`Watchdog: stopping LLM to protect system RAM.` |
+| 17:32:03 | DSH 仍选择本地模型并向 `127.0.0.1:8095` 发请求（此时无监听） |
+| 17:32–17:33 | 6 次尝试，每次约 10.5 s `UND_ERR_CONNECT_TIMEOUT`；SDK 报 `Request timed out.`，DSH 重试 5 次后放弃 |
+
+**根因**：
+
+1. 请求发出前 LLM 已被 RAM watchdog 停掉，不是模型算得慢，也不是 32K/128K 上下文问题。
+2. WSL mirrored networking 下，Windows 端端口关闭时 `127.0.0.1` 不会立刻 `ECONNREFUSED`，而是静默丢包；Node/undici 默认 connect timeout 10 s，OpenAI SDK 将其映射为 `APIConnectionTimeoutError`（消息正是 `Request timed out.`）。
+3. watchdog 只看 free RAM。`low-ram mmap` 模式下空闲页本来就可回收，长 prefill 后短暂低于 4 GB 并不代表危险，属于误杀。
+
+**另一个独立失败（同一时期）**：16:49 在长会话里切到本地模型，服务端 `context=32768`，而 prompt 已有 187,701 token，XeStrata 返回
+`400 request exceeds the context window ... requests are never truncated`。这不是超时，处理方式是**新会话/压缩历史**，或同时调大服务端 `context` 与 DSH `contextWindow`。
+
+**已实施**：
+
+- 默认上下文回到 **32,768**（`config\llm.json`），日常长文档再临时切 64K/128K；
+- DSH 的 `qwen38-flash-next` 模型声明同步为 `contextWindow: 32768`（Windows home patch 与 WSL web profile）；
+- watchdog 改为 `stopRamGB=2`、`stopAfterSamples=12`（2 GB 连续 60 秒才停）；
+- 新增 `.\b65.ps1 llm check`：非 0 退出并明确打印 NOT READY，切换 DSH 前先跑；
+- 排错文档补充超时与上下文溢出两条。
+
+**使用顺序**：
+
+```powershell
+.\b65.ps1 llm start
+.\b65.ps1 llm check          # 必须 LLM READY
+# 再在 DSH 里选择 13900_qwen3.8_flash_next_XEStrata_IQ3_XXS
 ```

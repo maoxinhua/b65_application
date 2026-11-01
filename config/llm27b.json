@@ -1,0 +1,33 @@
+{
+    "enabled":  true,
+    "engine":  "llamacpp-sycl",
+    "exe":  "tools/llama-b12024/llama-server.exe",
+    "model":  "models/llm/Qwen3.8-27B/Qwen3.8-27B-UD-Q6_K_XL.gguf",
+    "mtp":  "models/llm/Qwen3.8-27B/mtp-Qwen3.8-27B-Q4_0.gguf",
+    "modelName":  "qwen3.8-27b-ud-q6kxl",
+    "label":  "Qwen3.8-27B UD-Q6_K_XL (quality)",
+    "quant":  "UD-Q6_K_XL",
+    "quality":  "max",
+    "port":  8096,
+    "host":  "0.0.0.0",
+    "context":  65536,
+    "contextPresets":  [
+                           32768,
+                           65536,
+                           131072
+                       ],
+    "cacheTypeK":  "q8_0",
+    "cacheTypeV":  "q8_0",
+    "device":  "SYCL0",
+    "gpuSelector":  "level_zero:0",
+    "threads":  8,
+    "parallel":  1,
+    "batch":  1024,
+    "ubatch":  256,
+    "mtpDepth":  3,
+    "temperature":  0.7,
+    "topP":  0.8,
+    "topK":  20,
+    "presencePenalty":  1.5,
+    "startTimeoutSec":  900
+}

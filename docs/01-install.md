@@ -34,7 +34,7 @@ cd E:\dsh_project\B65_graphic
 .\b65.ps1 install llm
 ```
 
-脚本从 GitHub Releases 下载 `XeStrata-0.1.45-1-windows-x64.7z` 并解压到 `apps\XeStrata`。
+脚本从 GitHub Releases 下载 `XeStrata-0.2.2-1-windows-x64.7z` 并解压到 `apps\XeStrata`。
 **这一步不含模型**，先跑一次硬件检查：
 
 ```powershell

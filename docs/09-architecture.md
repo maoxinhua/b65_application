@@ -127,6 +127,55 @@ xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
 - Key 在 `runtime\state.json`，面板/`llm endpoint` 可复制；
 - LAN 地址：`http://10.88.115.60:8095/v1`。
 
+### 3.6 Qwen3.8-27B 质量引擎（可选）
+
+XeStrata 是 125B MoE 的专家分层引擎；Qwen3.8-27B 是稠密/混合注意力模型，因此走 **llama.cpp SYCL** 独立路径：
+
+| 项目 | 值 |
+|---|---|
+| 运行时 | `tools/llama-b12024/llama-server.exe`（Windows SYCL b12024） |
+| 主权重 | `models/llm/Qwen3.8-27B/Qwen3.8-27B-UD-Q6_K_XL.gguf` |
+| MTP draft | `models/llm/Qwen3.8-27B/mtp-Qwen3.8-27B-Q4_0.gguf` |
+| 端口 | **8096** |
+| 上下文 | 64K（已验证；32K 也可） |
+| 设备 | `SYCL0`（B65） |
+| 特点 | 质量优先；加载慢、解码慢于 125B，但不需要 60GB 专家池 |
+| 控制 | `b65.ps1 llm27b`；面板“27B 开/停”按钮；详见 [10-27b-quality-engine.md](10-27b-quality-engine.md) |
+| 实测 | 32K/64K 均通过；短请求 40–54 tok/s；24K prompt prefill 176 tok/s、decode 37.5 tok/s |
+
+启动前会停掉 XeStrata / ComfyUI；启动 XeStrata 时也会停掉 27B，保持单 GPU 独占。
+
+### 3.7 XeStrata 0.2.2-1 实测与 Gyro 决策
+
+2026-11-01 已从 **xe0.1.45-1** 升级到 **xe0.2.2-1**（备份在 `apps\XeStrata-0.1.45-1` / `apps\XeStrata.old`）。
+
+IQ3_XXS、32K、WSL 开：
+
+| 项目 | 0.2.2-1 |
+|---|---:|
+| math decode（暖机） | 29.7 / 40.5 tok/s |
+| 中文 decode | 33.4 / 35.2 tok/s |
+| JSON decode | 36.4 / 37.0 tok/s |
+
+IQ3_XXS、128K、110,068 token 长输入：
+
+| 版本 | prefill | 总耗时 | decode |
+|---|---:|---:|---:|
+| 0.1.45-1 | 439.5 tok/s | 4m13s | 40.8 tok/s |
+| **0.2.2-1** | **1,392.4 tok/s** | **1m22s** | **41.0 tok/s** |
+
+0.2.2 对长上下文 prefill 提升约 **3.2×**，短请求基本持平；升级值得保留。
+
+**Gyro-M / Gyro-S（0.2.2 新增）**：
+
+| 模型 | 下载 | RAM | B70 32K decode | B70 1K decode | 结论 |
+|---|---:|---:|---:|---:|---|
+| IQ3_XXS | 75.8 GB | 60 GB | 91.9 | 87.4 | 当前默认 |
+| Gyro-M | 92.0 GB | 35 GB | 90.8 | 97.8 | 质量约 IQ3_XXS，下载/磁盘更大；不替换 |
+| Gyro-S | 58.5 GB | 27.6 GB | 未测 | 未测 | 小内存选项，质量低于 IQ3_XXS |
+
+Gyro-M 需要 **92 GB 下载 + 35 GB RAM**，在你的 64 GB/32 GB 配置上没有质量优势，因此**没有下载/加入**；保留 IQ3_XXS。
+
 ## 4. 视频运行时
 
 | 组件 | 位置 / 端口 |
@@ -199,6 +248,8 @@ xestrata-cli.exe --model IQ3_XXS --context 32768 --host 0.0.0.0 --port 8095
 |---|---|---|
 | **Windows DSH** | `C:\Users\<you>\.dsh\cordis.patch.yml` | `http://10.88.115.60:8095/v1` |
 | **WSL2 DSH（web）** | `/home/<you>/.dsh/profiles/web/cordis.patch.yml` | `http://127.0.0.1:8095/v1` |
+| **27B（WSL2）** | 同一 web profile | `http://127.0.0.1:8096/v1` |
+| **27B（Windows）** | `C:\Users\<you>\.dsh\cordis.patch.yml` | `http://10.88.115.60:8096/v1` |
 
 两者都指向同一个 XeStrata 实例，只是网络路径不同：
 
@@ -224,6 +275,22 @@ qwen38-flash-next:
       input: [text]
 ```
 
+### 27B 路由
+
+```yaml
+qwen38-27b-local:
+  displayName: 13900_Qwen3.8-27B_UD-Q6_K_XL
+  apiKeyEnv: QWEN38_27B_API_KEY
+  api: openai-completions
+  baseURL: http://127.0.0.1:8096/v1   # Windows: http://10.88.115.60:8096/v1
+  models:
+    - id: qwen3.8-27b-ud-q6kxl
+      name: 13900_Qwen3.8-27B_UD-Q6_K_XL
+      contextWindow: 65536
+      maxTokens: 8192
+      input: [text]
+```
+
 ### 关键点
 
 - `id` 必须是服务端真实 id `qwen3.8-flash-next-iq3_xxs`；`name/displayName` 才是 `13900_...`；
@@ -242,6 +309,7 @@ qwen38-flash-next:
 | IQ3_XXS 128K mmap | ~34.5 GB（31.5 + 3 shared） | ~20.5 GB | 110K token 已验证，prefill ~440 tok/s |
 | IQ3_XXS 256K | ~33 GB | ~27 GB | 仅加载验证 |
 | IQ3_S | ~33 GB | 更紧 | 需关大程序 |
+| 27B UD-Q6_K_XL | ~30.8 GB | ~15 GB | 64K 已加载，质量优先 |
 | ComfyUI final | ~26 GB | ~20 GB | 与 LLM 互斥 |
 
 WSL2 额外占约 6–8 GB；关掉可把 IQ3_XXS 从 `mmap` 切到 `on`（~48 tok/s），但**不是必须**。

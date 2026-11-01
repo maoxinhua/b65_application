@@ -2,7 +2,7 @@
 # The official Strata build has no Intel engine on Windows; XeStrata is the supported path.
 [CmdletBinding()]
 param(
-    [string]$Version = 'xe0.1.45-1',
+    [string]$Version = 'xe0.2.2-1',
     [switch]$Force,
     [switch]$Interact,
     [switch]$CheckUpdate,

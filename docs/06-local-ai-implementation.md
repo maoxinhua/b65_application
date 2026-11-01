@@ -8,7 +8,7 @@
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
-| XeStrata 0.1.45-1 | `apps\XeStrata` | 已安装，Windows Intel Arc 引擎 |
+| XeStrata 0.2.2-1 | `apps\XeStrata` | 已安装，Windows Intel Arc 引擎 |
 | IQ3_XXS | `models\llm\IQ3_XXS`，70.6 GB | **默认**，`lowRam=mmap` |
 | IQ3_S | `models\llm\IQ3_S`，77.9 GB | 已安装，质量档，内存很紧 |
 | IQ2_XS | `models\llm\IQ2_XS`，63.4 GB | 回退档 |
@@ -99,6 +99,24 @@ Key       : .\b65.ps1 llm endpoint
 ```
 
 `/health` 不需要 Key；`/v1/models` 和 `/v1/chat/completions` 需要 Bearer。
+
+## 3.5 Qwen3.8-27B 质量引擎（可选）
+
+XeStrata 只跑 125B MoE；27B 走独立的 **llama.cpp SYCL** 路径：
+
+```powershell
+.\b65.ps1 llm27b start
+.\b65.ps1 llm27b status
+.\b65.ps1 llm27b endpoint
+.\b65.ps1 llm27b stop
+```
+
+- 引擎：`tools\llama-b12024\llama-server.exe`
+- 权重：`models\llm\Qwen3.8-27B\Qwen3.8-27B-UD-Q6_K_XL.gguf`
+- MTP：`mtp-Qwen3.8-27B-Q4_0.gguf`
+- 端口：`:8096`；上下文 **64K**（已验证）
+- 面板 LLM 页有 **“27B 开/停”** 按钮；启动会先停 XeStrata，反向亦然。
+- DSH 路由模板：`config\dsh.llama27b.yml`，模型 id `qwen3.8-27b-ud-q6kxl`。
 
 ## 4. 视频管线
 
